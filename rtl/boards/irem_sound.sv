@@ -206,9 +206,12 @@ assign msm_i[0].rst  = rst0 | reset;
 assign msm_i[0].data = b4_0 ? msm_d0 : {msm_d0[2:0], 1'b0};
 // TODO(M58): second MSM5205 in slave mode, clocked by the first one's VCK
 // MSM-REVERT-2026-10-25: was (jt5205) rst 1, cen 0, sel 3, din msm_d1
-assign msm_i[1].step = 1'b0;
-assign msm_i[1].rst  = 1'b1;
-assign msm_i[1].data = msm_d1;
+// Second MSM5205 = M52-SOUND-G (M58) only: slave, decodes on the master's VCK (MAME playmode ((b >> 2) & 4) | 3:
+// 4-bit mode from bit 4, prescaler = slave), reset = 3J port B bit 1. Held in reset on the small board.
+wire b4_1 = iob[4];
+assign msm_i[1].step = msm_step & large_map;
+assign msm_i[1].rst  = rst1 | reset | ~large_map;
+assign msm_i[1].data = b4_1 ? msm_d1 : {msm_d1[2:0], 1'b0};
 
 /////////////////////////////  Mixer  /////////////////////////////
 
@@ -288,7 +291,9 @@ always_ff @(posedge clk) begin
         if (tick) begin
             st <= 6'd0;
             // MSM-REVERT-2026-10-25: was  x <= 32'($signed(msm_o[0].sound)) <<< 12;   (jt5205)
-            x  <= 32'($signed(msm_o[0].signal)) <<< 12;                   // +-2048 -> +-0.5 Vcc
+            // M52-SOUND-G: both DA outputs into one node through R20 / R29 (10K each) = their average
+            x  <= large_map ? (32'($signed(msm_o[0].signal)) + 32'($signed(msm_o[1].signal))) <<< 11
+                            : 32'($signed(msm_o[0].signal)) <<< 12;            // +-2048 -> +-0.5 Vcc
         end else if (st != 6'd63) st <= st + 6'd1;
         case (st)
             6'd0:  begin ma <= sat27(34'(x) - 34'(lp1));                              mb <= K1;   end

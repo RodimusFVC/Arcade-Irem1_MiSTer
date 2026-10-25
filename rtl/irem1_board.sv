@@ -246,7 +246,7 @@ logic  [7:0] wram_da, vram_da, xram_da, sram_da, lb0_da, lb1_da;
 logic        wram_wa, vram_wa, xram_wa, sram_wa, lb0_wa, lb1_wa;
 logic  [7:0] wram_qa, wram_qb, vram_qa, vram_qb, xram_qa, xram_qb, sram_qa, sram_qb, lb0_qa, lb0_qb, lb1_qa, lb1_qb;
 logic        lb0_wb, lb1_wb;                     // line buffers: port B clears behind the display read
-assign {wram_ab, xram_aa, xram_ab, xram_da, xram_wa} = '0;
+assign wram_ab = '0;
 
 dpram_dc #(.widthad_a(12)) wram
 (
@@ -286,41 +286,86 @@ dpram_dc #(.widthad_a(9)) lbuf1
 
 /////////////////////////////  Boards  /////////////////////////////
 
-// M52 (variants 0 Moon Patrol, 1 Alpha One). Only board so far, so it drives the pools directly; the next board
-// adds the variant muxes here.
-logic [8:0] lb_aa, lb_ab;
-logic [7:0] lb_da;
-logic [1:0] lb_wa, lb_wb;
-logic       snd_wr;
-logic [7:0] snd_cmd;
-logic [16:0] vid_rom_a;
-logic [11:0] pal_a, clut_a;
+// Boards drive the pools through their own port sets; the active one (by variant) is muxed onto the pools, the pool
+// outputs go to every board. M52 = variants 0 (Moon Patrol) and 1 (Alpha One), M58 = variant 3 (10-Yard Fight).
+wire m58_sel = variant == 8'd3;
+
+// per-board port bundles: [0] = M52, [1] = M58
+chip_pool_pkg::z80pa_i_t bd_cpu_i[2];
+logic [16:0] bd_main_rom_a[2], bd_vid_rom_a[2];
+logic [11:0] bd_pal_a[2], bd_clut_a[2];
+logic [11:0] bd_wram_a[2], bd_vram_aa[2], bd_vram_ab[2], bd_xram_aa[2], bd_xram_ab[2];
+logic  [8:0] bd_sram_aa[2], bd_sram_ab[2], bd_lb_aa[2], bd_lb_ab[2];
+logic  [7:0] bd_wram_d[2], bd_vram_da[2], bd_sram_da[2], bd_xram_da[2], bd_lb_da[2], bd_snd_cmd[2], bd_hs_q[2];
+logic        bd_wram_we[2], bd_vram_wa[2], bd_sram_wa[2], bd_xram_wa[2], bd_snd_wr[2], bd_ce_pix[2];
+logic  [1:0] bd_lb_wa[2], bd_lb_wb[2];
+logic  [7:0] bd_r[2], bd_g[2], bd_b[2];
+logic        bd_hs[2], bd_vs[2], bd_hbl[2], bd_vbl[2];
+assign {bd_xram_aa[0], bd_xram_ab[0], bd_xram_da[0], bd_xram_wa[0]} = '0;   // M52 has no extra RAM
 
 m52_board m52
 (
-    .clk(clk), .reset(reset), .pause(pause), .alpha1v(variant == 8'd1), .rom_rgn(rom_rgn),
+    .clk(clk), .reset(reset), .pause(pause & ~m58_sel), .alpha1v(variant == 8'd1), .rom_rgn(rom_rgn),
     .in0(in0), .in1(in1), .in2(in2), .dsw1(dsw1), .dsw2(dsw2),
     .crt_flip(crt_flip), .h_adj(h_adj), .v_adj(v_adj),
-    .ce_pix(ce_pix), .video_r(video_r), .video_g(video_g), .video_b(video_b),
-    .video_hs(video_hs), .video_vs(video_vs), .video_hblank(video_hblank), .video_vblank(video_vblank),
-    .cpu_i(z80pa_0_i), .cpu_o(z80pa_0_o),
-    .cpu_rom_a(main_rom_a), .cpu_rom_q(main_rom_q), .vid_rom_a(vid_rom_a), .vid_rom_q(rom0_qb),
-    .pal_a(pal_a), .pal_q(rom1_qb), .clut_a(clut_a), .clut_q(rom1_qa),
-    .wram_a(wram_aa), .wram_d(wram_da), .wram_we(wram_wa), .wram_q(wram_qa),
-    .vram_aa(vram_aa), .vram_da(vram_da), .vram_wa(vram_wa), .vram_qa(vram_qa), .vram_ab(vram_ab), .vram_qb(vram_qb),
-    .sram_aa(sram_aa), .sram_da(sram_da), .sram_wa(sram_wa), .sram_ab(sram_ab), .sram_qb(sram_qb),
-    .lb_aa(lb_aa), .lb_da(lb_da), .lb_wa(lb_wa), .lb_ab(lb_ab), .lb_wb(lb_wb), .lb_qb0(lb0_qb), .lb_qb1(lb1_qb),
-    .snd_wr(snd_wr), .snd_cmd(snd_cmd),
-    .hs_address(hs_address), .hs_data_in(hs_data_in), .hs_data_out(hs_data_out), .hs_write(hs_write)
+    .ce_pix(bd_ce_pix[0]), .video_r(bd_r[0]), .video_g(bd_g[0]), .video_b(bd_b[0]),
+    .video_hs(bd_hs[0]), .video_vs(bd_vs[0]), .video_hblank(bd_hbl[0]), .video_vblank(bd_vbl[0]),
+    .cpu_i(bd_cpu_i[0]), .cpu_o(z80pa_0_o),
+    .cpu_rom_a(bd_main_rom_a[0]), .cpu_rom_q(main_rom_q), .vid_rom_a(bd_vid_rom_a[0]), .vid_rom_q(rom0_qb),
+    .pal_a(bd_pal_a[0]), .pal_q(rom1_qb), .clut_a(bd_clut_a[0]), .clut_q(rom1_qa),
+    .wram_a(bd_wram_a[0]), .wram_d(bd_wram_d[0]), .wram_we(bd_wram_we[0]), .wram_q(wram_qa),
+    .vram_aa(bd_vram_aa[0]), .vram_da(bd_vram_da[0]), .vram_wa(bd_vram_wa[0]), .vram_qa(vram_qa),
+    .vram_ab(bd_vram_ab[0]), .vram_qb(vram_qb),
+    .sram_aa(bd_sram_aa[0]), .sram_da(bd_sram_da[0]), .sram_wa(bd_sram_wa[0]), .sram_ab(bd_sram_ab[0]), .sram_qb(sram_qb),
+    .lb_aa(bd_lb_aa[0]), .lb_da(bd_lb_da[0]), .lb_wa(bd_lb_wa[0]), .lb_ab(bd_lb_ab[0]), .lb_wb(bd_lb_wb[0]),
+    .lb_qb0(lb0_qb), .lb_qb1(lb1_qb),
+    .snd_wr(bd_snd_wr[0]), .snd_cmd(bd_snd_cmd[0]),
+    .hs_address(hs_address), .hs_data_in(hs_data_in), .hs_data_out(bd_hs_q[0]), .hs_write(hs_write & ~m58_sel)
 );
-assign rom0_ab = vid_rom_a;
-assign rom1_ab = pal_a;
-assign rom1_aa = clut_a;
-assign {lb0_aa, lb1_aa} = {lb_aa, lb_aa};
-assign {lb0_da, lb1_da} = {lb_da, lb_da};
-assign {lb1_wa, lb0_wa} = lb_wa;
-assign {lb0_ab, lb1_ab} = {lb_ab, lb_ab};
-assign {lb1_wb, lb0_wb} = lb_wb;
+
+m58_board m58
+(
+    .clk(clk), .reset(reset), .pause(pause & m58_sel), .rom_rgn(rom_rgn),
+    .in0(in0), .in1(in1), .in2(in2), .dsw1(dsw1), .dsw2(dsw2),
+    .crt_flip(crt_flip), .h_adj(h_adj), .v_adj(v_adj),
+    .ce_pix(bd_ce_pix[1]), .video_r(bd_r[1]), .video_g(bd_g[1]), .video_b(bd_b[1]),
+    .video_hs(bd_hs[1]), .video_vs(bd_vs[1]), .video_hblank(bd_hbl[1]), .video_vblank(bd_vbl[1]),
+    .cpu_i(bd_cpu_i[1]), .cpu_o(z80pa_0_o),
+    .cpu_rom_a(bd_main_rom_a[1]), .cpu_rom_q(main_rom_q), .vid_rom_a(bd_vid_rom_a[1]), .vid_rom_q(rom0_qb),
+    .pal_a(bd_pal_a[1]), .pal_q(rom1_qb), .clut_a(bd_clut_a[1]), .clut_q(rom1_qa),
+    .wram_a(bd_wram_a[1]), .wram_d(bd_wram_d[1]), .wram_we(bd_wram_we[1]), .wram_q(wram_qa),
+    .vram_aa(bd_vram_aa[1]), .vram_da(bd_vram_da[1]), .vram_wa(bd_vram_wa[1]), .vram_qa(vram_qa),
+    .vram_ab(bd_vram_ab[1]), .vram_qb(vram_qb),
+    .sram_aa(bd_sram_aa[1]), .sram_da(bd_sram_da[1]), .sram_wa(bd_sram_wa[1]), .sram_qa(sram_qa),
+    .sram_ab(bd_sram_ab[1]), .sram_qb(sram_qb),
+    .xram_aa(bd_xram_aa[1]), .xram_da(bd_xram_da[1]), .xram_wa(bd_xram_wa[1]), .xram_ab(bd_xram_ab[1]), .xram_qb(xram_qb),
+    .lb_aa(bd_lb_aa[1]), .lb_da(bd_lb_da[1]), .lb_wa(bd_lb_wa[1]), .lb_ab(bd_lb_ab[1]), .lb_wb(bd_lb_wb[1]),
+    .lb_qb0(lb0_qb), .lb_qb1(lb1_qb),
+    .snd_wr(bd_snd_wr[1]), .snd_cmd(bd_snd_cmd[1]),
+    .hs_address(hs_address), .hs_data_in(hs_data_in), .hs_data_out(bd_hs_q[1]), .hs_write(hs_write & m58_sel)
+);
+
+wire bs = m58_sel;
+assign z80pa_0_i  = bd_cpu_i[bs];
+assign main_rom_a = bd_main_rom_a[bs];
+assign rom0_ab    = bd_vid_rom_a[bs];
+assign rom1_ab    = bd_pal_a[bs];
+assign rom1_aa    = bd_clut_a[bs];
+assign {wram_aa, wram_da, wram_wa}          = {bd_wram_a[bs], bd_wram_d[bs], bd_wram_we[bs]};
+assign {vram_aa, vram_da, vram_wa, vram_ab} = {bd_vram_aa[bs], bd_vram_da[bs], bd_vram_wa[bs], bd_vram_ab[bs]};
+assign {sram_aa, sram_da, sram_wa, sram_ab} = {bd_sram_aa[bs], bd_sram_da[bs], bd_sram_wa[bs], bd_sram_ab[bs]};
+assign {xram_aa, xram_da, xram_wa, xram_ab} = {bd_xram_aa[bs], bd_xram_da[bs], bd_xram_wa[bs], bd_xram_ab[bs]};
+assign {lb0_aa, lb1_aa} = {bd_lb_aa[bs], bd_lb_aa[bs]};
+assign {lb0_da, lb1_da} = {bd_lb_da[bs], bd_lb_da[bs]};
+assign {lb1_wa, lb0_wa} = bd_lb_wa[bs];
+assign {lb0_ab, lb1_ab} = {bd_lb_ab[bs], bd_lb_ab[bs]};
+assign {lb1_wb, lb0_wb} = bd_lb_wb[bs];
+wire       snd_wr  = bd_snd_wr[bs];
+wire [7:0] snd_cmd = bd_snd_cmd[bs];
+assign hs_data_out = bd_hs_q[bs];
+assign ce_pix = bd_ce_pix[bs];
+assign {video_r, video_g, video_b} = {bd_r[bs], bd_g[bs], bd_b[bs]};
+assign {video_hs, video_vs, video_hblank, video_vblank} = {bd_hs[bs], bd_vs[bs], bd_hbl[bs], bd_vbl[bs]};
 
 // Irem sound board (every variant; M58 = large map). MSM5205 control map = MAME's: Moon Patrol writes 3J port B = 0x13
 // once; MAME's map gives a 4 kHz VCK / NMI, the drawing's IOB1 = S1 reading gives 8 kHz, and the sim's music tracks
