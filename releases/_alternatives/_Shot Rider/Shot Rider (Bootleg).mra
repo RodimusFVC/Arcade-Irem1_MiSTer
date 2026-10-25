@@ -1,0 +1,73 @@
+<misterromdescription>
+    <name>Shot Rider (Bootleg)</name>
+    <region>World</region>
+    <homebrew>no</homebrew>
+    <bootleg>yes</bootleg>
+    <version></version>
+    <alternative></alternative>
+    <platform></platform>
+    <series>Shot Rider</series>
+    <year>1985</year>
+    <manufacturer>bootleg</manufacturer>
+    <category>Driving</category>
+
+    <setname>shtriderb</setname>
+    <parent>shtrider</parent>
+    <mameversion>0289</mameversion>
+    <rbf>Irem1</rbf>
+    <about></about>
+
+    <resolution>15kHz</resolution>
+    <rotation>vertical (ccw)</rotation>
+    <flip>yes</flip>
+
+    <players>2 (alternating)</players>
+    <joystick>2-way</joystick>
+    <special_controls></special_controls>
+    <num_buttons>2</num_buttons>
+    <buttons names="Fire,Button 2,Not Used,Not Used,Coin,Start 1P,Start 2P,Pause,Not Used,Not Used,Not Used" default="A,B,X,Y,Select,Start,R,L"/>
+
+    <switches default="FF,FF">
+        <dip name="Coin A" bits="0,2" ids="5C/1C,4C/1C,3C/1C,2C/1C,1C/1C,1C/2C,1C/3C,1C/5C" values="0,4,2,6,7,3,5,1"/>
+        <dip name="Coin B" bits="3,4" ids="3C/1C,2C/1C,1C/1C,1C/2C" values="0,2,3,1"/>
+        <dip name="Flip Screen" bits="8" ids="Off,On" values="1,0"/>
+        <dip name="Speed Display" bits="9" ids="km/h,mph" values="1,0"/>
+        <dip name="Fuel Reduced on Collision" bits="10" ids="10%,15%" values="1,0"/>
+        <dip name="Cabinet" bits="11" ids="Upright,Cocktail" values="1,0"/>
+    </switches>
+
+    <!-- Index 0: MAME regions, packed store of rtl/irem1_board.sv (region table in index 1 bytes 64-111) -->
+    <rom index="0" md5="none" zip="shtriderb.zip|shtrider.zip">
+        <part crc="8bca38d7" name="sr1.20.m3"/>
+        <part crc="56d4a66a" name="sr2.21.l3"/>
+        <part crc="44cab4cc" name="sr3.22.k3"/>
+        <part crc="02b96eaa" name="sr4.23.h3"/>
+        <part crc="a8396b76" name="sr11.7.a1"/>
+        <part crc="34449f79" name="sr5.f3"/>
+        <part crc="de43653d" name="sr6.c3"/>
+        <part crc="3445b81c" name="sr7.a3"/>
+        <part crc="4072b096" name="sr8.17.n3"/>
+        <part crc="fd4cc7e6" name="sr9.18.m3"/>
+        <part crc="0a117925" name="sr10.19.k3"/>
+        <part repeat="0xA000">00</part>
+        <part crc="854487a7" name="6349-2.k2"/>
+        <part crc="ee97c581" name="prom1.6.f1"/>
+        <part crc="5db47092" name="prom2.12.h2"/>
+    </rom>
+
+    <!-- Index 1: board variant, flags, input map, ROM region table (see Arcade-Irem1.sv) -->
+    <rom index="1">
+        <part>
+            06 18 00 00 FF FF FF FF FF FF 80 80 80 00 01 80
+            13 14 00 11 00 00 00 12 04 03 0E 0D 00 05 00 06
+            00 00 0B 0C 00 00 00 00 00 00 00 00 00 00 00 00
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+            00 00 00 00 80 00 80 00 60 00 20 00 A0 00 00 00
+            60 00 00 01 00 00 60 00 00 00 00 00 00 00 00 00
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 04 00
+        </part>
+    </rom>
+
+    <remark>Shot Rider (Bootleg)</remark>
+    <mratimestamp>20261024000000</mratimestamp>
+</misterromdescription>

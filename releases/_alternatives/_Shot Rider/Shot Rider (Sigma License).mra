@@ -1,0 +1,74 @@
+<misterromdescription>
+    <name>Shot Rider (Sigma License)</name>
+    <region>World</region>
+    <homebrew>no</homebrew>
+    <bootleg>no</bootleg>
+    <version></version>
+    <alternative></alternative>
+    <platform></platform>
+    <series>Shot Rider</series>
+    <year>1984</year>
+    <manufacturer>Seibu Kaihatsu (Sigma license)</manufacturer>
+    <category>Driving</category>
+
+    <setname>shtridera</setname>
+    <parent>shtrider</parent>
+    <mameversion>0289</mameversion>
+    <rbf>Irem1</rbf>
+    <about></about>
+
+    <resolution>15kHz</resolution>
+    <rotation>vertical (ccw)</rotation>
+    <flip>yes</flip>
+
+    <players>2 (alternating)</players>
+    <joystick>2-way</joystick>
+    <special_controls></special_controls>
+    <num_buttons>2</num_buttons>
+    <buttons names="Fire,Button 2,Not Used,Not Used,Coin,Start 1P,Start 2P,Pause,Not Used,Not Used,Not Used" default="A,B,X,Y,Select,Start,R,L"/>
+
+    <switches default="FF,FF">
+        <dip name="Coin A" bits="0,2" ids="5C/1C,4C/1C,3C/1C,2C/1C,1C/1C,1C/2C,1C/3C,1C/5C" values="0,4,2,6,7,3,5,1"/>
+        <dip name="Coin B" bits="3,4" ids="3C/1C,2C/1C,1C/1C,1C/2C" values="0,2,3,1"/>
+        <dip name="Flip Screen" bits="8" ids="Off,On" values="1,0"/>
+        <dip name="Speed Display" bits="9" ids="km/h,mph" values="1,0"/>
+        <dip name="Fuel Reduced on Collision" bits="10" ids="10%,15%" values="1,0"/>
+        <dip name="Cabinet" bits="11" ids="Upright,Cocktail" values="1,0"/>
+    </switches>
+
+    <!-- Index 0: MAME regions, packed store of rtl/irem1_board.sv (region table in index 1 bytes 64-111) -->
+    <rom index="0" md5="none" zip="shtridera.zip|shtrider.zip">
+        <part crc="eb51315c" name="1.bin"/>
+        <part crc="97675d19" name="2.bin"/>
+        <part crc="78d051cd" name="3.bin"/>
+        <part crc="02b96eaa" name="4.bin"/>
+        <part crc="a8396b76" name="11.bin"/>
+        <part crc="34449f79" name="5.bin"/>
+        <part crc="de43653d" name="6.bin"/>
+        <part crc="3445b81c" name="7.bin"/>
+        <part crc="4072b096" name="8.bin"/>
+        <part crc="fd4cc7e6" name="9.bin"/>
+        <part crc="0a117925" name="10.bin"/>
+        <part repeat="0xA000">00</part>
+        <part crc="e9e258e5" name="1.bpr"/>
+        <part crc="6cf4591c" name="2.bpr"/>
+        <part crc="ee97c581" name="4.bpr"/>
+        <part crc="5db47092" name="3.bpr"/>
+    </rom>
+
+    <!-- Index 1: board variant, flags, input map, ROM region table (see Arcade-Irem1.sv) -->
+    <rom index="1">
+        <part>
+            05 18 02 00 FF FF FF FF FF FF 80 80 80 00 01 80
+            13 14 00 11 00 00 00 12 04 03 0E 0D 00 05 00 06
+            00 00 0B 0C 00 00 00 00 00 00 00 00 00 00 00 00
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+            00 00 00 00 80 00 80 00 60 00 20 00 A0 00 00 00
+            60 00 00 01 00 00 60 00 00 00 00 00 00 00 00 00
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 04 00
+        </part>
+    </rom>
+
+    <remark>Shot Rider (Sigma License) (Seibu Kaihatsu (Sigma License))</remark>
+    <mratimestamp>20261024000000</mratimestamp>
+</misterromdescription>

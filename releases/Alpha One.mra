@@ -1,0 +1,79 @@
+<misterromdescription>
+    <name>Alpha One</name>
+    <region>World</region>
+    <homebrew>no</homebrew>
+    <bootleg>no</bootleg>
+    <version></version>
+    <alternative></alternative>
+    <platform></platform>
+    <series>Alpha One</series>
+    <year>1988</year>
+    <manufacturer>Vision Electronics</manufacturer>
+    <category>Shooter</category>
+
+    <setname>alpha1v</setname>
+    <parent>alpha1v</parent>
+    <mameversion>0289</mameversion>
+    <rbf>Irem1</rbf>
+    <about></about>
+
+    <resolution>15kHz</resolution>
+    <rotation>horizontal</rotation>
+    <flip>yes</flip>
+
+    <players>2 (alternating)</players>
+    <joystick>8-way</joystick>
+    <special_controls></special_controls>
+    <num_buttons>2</num_buttons>
+    <buttons names="Fire,Button 2,Not Used,Not Used,Coin,Start 1P,Start 2P,Pause,Not Used,Not Used,Not Used" default="A,B,X,Y,Select,Start,R,L"/>
+
+    <switches default="EE,00">
+        <dip name="Lives" bits="0,1" ids="2,3,4,5" values="3,2,1,0"/>
+        <dip name="Cabinet" bits="2" ids="Upright,Cocktail" values="1,0"/>
+        <dip name="Allow Continue" bits="4" ids="No,Yes" values="1,0"/>
+        <dip name="Coin A" bits="8,11" ids="4C/1C,3C/1C,2C/1C,1C/1C" values="11,12,13,0"/>
+        <dip name="Coin B" bits="12,15" ids="1C/1C,1C/2C,1C/3C,1C/4C,1C/5C,1C/6C,1C/7C" values="0,13,12,11,10,9,8"/>
+    </switches>
+
+    <!-- Index 0: MAME regions, packed store of rtl/irem1_board.sv (region table in index 1 bytes 64-111) -->
+    <rom index="0" md5="none" zip="alpha1v.zip">
+        <part crc="3a679d34" name="2-m3"/>
+        <part crc="2f09df64" name="3-l3"/>
+        <part crc="64fb9c8a" name="4-k3"/>
+        <part crc="d1643d18" name="5-j3"/>
+        <part crc="cf34ab51" name="6-h3"/>
+        <part crc="99db9781" name="7-f3"/>
+        <part crc="3b0b4b0d" name="7a e3"/>
+        <part crc="9e07fdd5" name="1-a1"/>
+        <part crc="4b799229" name="13-f3"/>
+        <part crc="cf00c737" name="14-e3"/>
+        <part crc="dc26df76" name="15-n3"/>
+        <part crc="39b9863b" name="16-l3"/>
+        <part crc="cfd90773" name="17-k3"/>
+        <part crc="7659440a" name="11-k3"/>
+        <part crc="7659440a" name="12-jh3"/>
+        <part crc="0fdb7d13" name="9-n3"/>
+        <part crc="9dde3a75" name="10-lm3"/>
+        <part repeat="0xF000">00</part>
+        <part crc="58678ea8" name="63s481-a2"/>
+        <part crc="6a57eff2" name="18s030-m1"/>
+        <part crc="d8bdd0df" name="mb7051-f1"/>
+        <part crc="ce9f0ef9" name="mb7052-h2"/>
+    </rom>
+
+    <!-- Index 1: board variant, flags, input map, ROM region table (see Arcade-Irem1.sv) -->
+    <rom index="1">
+        <part>
+            01 00 00 00 FF FF FF EE 00 FF 80 80 80 00 01 80
+            13 14 12 11 00 00 00 00 04 03 02 01 06 00 00 05
+            0C 0B 0A 09 0E 00 00 0D 00 00 00 00 00 00 00 00
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+            00 00 00 00 70 00 70 00 70 00 10 00 80 00 00 00
+            20 00 A0 00 00 00 30 00 D0 00 00 00 20 00 F0 00
+            00 00 20 00 00 00 00 00 00 00 00 00 00 00 04 00
+        </part>
+    </rom>
+
+    <remark>Alpha One (Vision Electronics)</remark>
+    <mratimestamp>20261024000000</mratimestamp>
+</misterromdescription>

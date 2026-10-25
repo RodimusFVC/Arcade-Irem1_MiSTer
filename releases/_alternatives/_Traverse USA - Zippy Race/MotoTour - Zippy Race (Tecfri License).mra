@@ -1,0 +1,78 @@
+<misterromdescription>
+    <name>MotoTour / Zippy Race (Tecfri License)</name>
+    <region>World</region>
+    <homebrew>no</homebrew>
+    <bootleg>no</bootleg>
+    <version></version>
+    <alternative></alternative>
+    <platform></platform>
+    <series>Traverse USA</series>
+    <year>1983</year>
+    <manufacturer>Irem (Tecfri license)</manufacturer>
+    <category>Driving</category>
+
+    <setname>mototour</setname>
+    <parent>travrusa</parent>
+    <mameversion>0289</mameversion>
+    <rbf>Irem1</rbf>
+    <about></about>
+
+    <resolution>15kHz</resolution>
+    <rotation>vertical (ccw)</rotation>
+    <flip>yes</flip>
+
+    <players>2 (alternating)</players>
+    <joystick>2-way</joystick>
+    <special_controls></special_controls>
+    <num_buttons>2</num_buttons>
+    <buttons names="Fire,Button 2,Not Used,Not Used,Coin,Start 1P,Start 2P,Pause,Not Used,Not Used,Not Used" default="A,B,X,Y,Select,Start,R,L"/>
+
+    <switches default="F7,FD">
+        <dip name="Fuel Reduced on Collision" bits="0,1" ids="8/120 Dots,10/120 Dots,12/120 Dots,14/120 Dots" values="3,2,1,0"/>
+        <dip name="Fuel Consumption" bits="2" ids="Low,High" values="1,0"/>
+        <dip name="Allow Continue" bits="3" ids="No,Yes" values="1,0"/>
+        <dip name="Flip Screen" bits="8" ids="Off,On" values="1,0"/>
+        <dip name="Cabinet" bits="9" ids="Upright,Cocktail"/>
+        <dip name="Coin Mode" bits="10" ids="Mode 1,Mode 2" values="1,0"/>
+        <dip name="Speed Type" bits="11" ids="mph,km/h" values="1,0"/>
+        <dip name="Stop Mode (Cheat)" bits="12" ids="Off,On" values="1,0"/>
+        <dip name="Title" bits="13" ids="Traverse USA,Zippy Race" values="1,0"/>
+        <dip name="Invulnerability (Cheat)" bits="14" ids="Off,On" values="1,0"/>
+        <dip name="Service Mode" bits="15" ids="Off,On" values="1,0"/>
+    </switches>
+
+    <!-- Index 0: MAME regions, packed store of rtl/irem1_board.sv (region table in index 1 bytes 64-111) -->
+    <rom index="0" md5="none" zip="mototour.zip|travrusa.zip">
+        <part crc="fe643567" name="mt1-4.m3"/>
+        <part crc="38d9d0f5" name="mt1-5.l3"/>
+        <part crc="efd325f2" name="mt1-6.k3"/>
+        <part crc="ab8a3a33" name="mt1-7.j3"/>
+        <part crc="a02ad8a0" name="snd.a1"/>
+        <part crc="aa8994dd" name="mt1-1.e3"/>
+        <part crc="3a046dd1" name="mt1-2.c3"/>
+        <part crc="1cc3d3f4" name="mt1-3.a3"/>
+        <part crc="600a57f5" name="mt1-8.n3"/>
+        <part crc="6f9f2a4e" name="mt1-9.m3"/>
+        <part crc="d958def5" name="mt1-10.k3"/>
+        <part repeat="0xB000">00</part>
+        <part crc="c9724350" name="mmi6349.k2"/>
+        <part crc="a1130007" name="prom1.f1"/>
+        <part crc="76062638" name="prom2.h2"/>
+    </rom>
+
+    <!-- Index 1: board variant, flags, input map, ROM region table (see Arcade-Irem1.sv) -->
+    <rom index="1">
+        <part>
+            04 14 00 00 FF FF FF F7 FD FF 80 80 80 00 01 80
+            13 14 17 11 00 00 00 00 04 03 00 00 00 05 00 06
+            0C 0B 00 00 12 0D 00 0E 00 00 00 00 00 00 00 00
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+            00 00 00 00 80 00 80 00 70 00 10 00 90 00 00 00
+            60 00 F0 00 00 00 60 00 00 00 00 00 00 00 00 00
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 04 00
+        </part>
+    </rom>
+
+    <remark>MotoTour / Zippy Race (Tecfri License) (Irem (Tecfri License))</remark>
+    <mratimestamp>20261024000000</mratimestamp>
+</misterromdescription>

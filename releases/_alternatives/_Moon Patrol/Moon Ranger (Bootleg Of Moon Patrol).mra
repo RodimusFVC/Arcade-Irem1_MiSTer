@@ -1,0 +1,79 @@
+<misterromdescription>
+    <name>Moon Ranger (Bootleg Of Moon Patrol)</name>
+    <region>World</region>
+    <homebrew>no</homebrew>
+    <bootleg>yes</bootleg>
+    <version></version>
+    <alternative></alternative>
+    <platform></platform>
+    <series>Moon Patrol</series>
+    <year>1982</year>
+    <manufacturer>bootleg</manufacturer>
+    <category>Shooter</category>
+
+    <setname>mranger</setname>
+    <parent>mpatrol</parent>
+    <mameversion>0289</mameversion>
+    <rbf>Irem1</rbf>
+    <about></about>
+
+    <resolution>15kHz</resolution>
+    <rotation>horizontal</rotation>
+    <flip>yes</flip>
+
+    <players>2 (alternating)</players>
+    <joystick>2-way</joystick>
+    <special_controls></special_controls>
+    <num_buttons>2</num_buttons>
+    <buttons names="Fire,Button 2,Not Used,Not Used,Coin,Start 1P,Start 2P,Pause,Not Used,Not Used,Not Used" default="A,B,X,Y,Select,Start,R,L"/>
+
+    <switches default="FE,FD">
+        <dip name="Lives" bits="0,1" ids="1,2,3,5"/>
+        <dip name="Bonus Life" bits="2,3" ids="10000 30000 50000,20000 40000 60000,10000,None" values="3,2,1,0"/>
+        <dip name="Coinage" bits="4,7" ids="7C/1C,6C/1C,5C/1C,4C/1C,3C/1C,2C/1C,1C/1C,1C/2C,1C/3C,1C/4C,1C/5C,1C/6C,1C/7C,1C/8C,Free Play" values="9,10,11,12,13,14,15,7,6,5,4,3,2,1,0"/>
+        <dip name="Flip Screen" bits="8" ids="Off,On" values="1,0"/>
+        <dip name="Cabinet" bits="9" ids="Upright,Cocktail"/>
+        <dip name="Coin Mode" bits="10" ids="Mode 1,Mode 2" values="1,0"/>
+        <dip name="Invulnerability (Cheat)" bits="14" ids="Off,On" values="1,0"/>
+        <dip name="Service Mode" bits="15" ids="Off,On" values="1,0"/>
+        <dip name="Stop Mode (Cheat)" bits="12" ids="Off,On" values="1,0"/>
+        <dip name="Sector Selection (Cheat)" bits="13" ids="Off,On" values="1,0"/>
+    </switches>
+
+    <!-- Index 0: MAME regions, packed store of rtl/irem1_board.sv (region table in index 1 bytes 64-111) -->
+    <rom index="0" md5="none" zip="mranger.zip|mpatrol.zip">
+        <part crc="5873a860" name="mpa-1.3m"/>
+        <part crc="217dd431" name="mra-2.3l"/>
+        <part crc="9f0af7b2" name="mra-3.3k"/>
+        <part crc="7fe8e2cd" name="mra-4.3j"/>
+        <part crc="561d3108" name="mp-s1.1a"/>
+        <part crc="cca6d023" name="mpe-4.3f"/>
+        <part crc="e3ee7f75" name="mpe-5.3e"/>
+        <part crc="707ace5e" name="mpb-2.3m"/>
+        <part crc="9b72133a" name="mpb-1.3n"/>
+        <part crc="c46a7f72" name="mpe-1.3l"/>
+        <part crc="c7aa1fb0" name="mpe-2.3k"/>
+        <part crc="a0919392" name="mpe-3.3h"/>
+        <part repeat="0x14000">00</part>
+        <part crc="07f99284" name="mpc-4.2a"/>
+        <part crc="6a57eff2" name="mpc-3.1m"/>
+        <part crc="26979b13" name="mpc-1.1f"/>
+        <part crc="7ae4cd97" name="mpc-2.2h"/>
+    </rom>
+
+    <!-- Index 1: board variant, flags, input map, ROM region table (see Arcade-Irem1.sv) -->
+    <rom index="1">
+        <part>
+            00 00 00 00 FF FF FF FE FD FF 80 80 80 00 01 80
+            13 14 16 11 00 00 00 00 04 03 00 00 00 06 00 05
+            0C 0B 00 00 12 0E 00 0D 00 00 00 00 00 00 00 00
+            00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+            00 00 00 00 40 00 40 00 70 00 10 00 50 00 00 00
+            20 00 70 00 00 00 20 00 90 00 00 00 10 00 A0 00
+            00 00 10 00 B0 00 00 00 10 00 00 00 00 00 04 00
+        </part>
+    </rom>
+
+    <remark>Moon Ranger (Bootleg Of Moon Patrol)</remark>
+    <mratimestamp>20261024000000</mratimestamp>
+</misterromdescription>
