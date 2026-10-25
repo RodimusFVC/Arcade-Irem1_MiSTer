@@ -5,6 +5,7 @@ set_global_assignment -name SYSTEMVERILOG_FILE Arcade-Irem1.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/irem1_board.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/boards/m52_board.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/boards/m58_board.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/boards/trav_board.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/boards/irem_sound.sv
 # MSM-REVERT-2026-10-25: our msm5205.sv back (Moon Patrol rock "thonk" inaudible with jt5205); jt5205 was:
 # set_global_assignment -name QIP_FILE rtl/sound/jt5205/jt5205.qip
