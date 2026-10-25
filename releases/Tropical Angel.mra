@@ -77,6 +77,17 @@
         </part>
     </rom>
 
+    <!-- Index 3: hiscore config (MAME hiscore.dat), index 4: saved scores -->
+    <rom index="3" md5="none">
+        <part>
+            01 CE A8 00 00 FF 00 02 00 02 00 01 11 11 00 00
+            00 00 E7 80 00 1E 02 4E
+            00 00 E0 D3 00 03 02 00
+        </part>
+    </rom>
+    <rom index="4"></rom>
+    <nvram index="4" size="33"></nvram>
+
     <remark>Tropical Angel (Irem)</remark>
     <mratimestamp>20261024000000</mratimestamp>
 </misterromdescription>
