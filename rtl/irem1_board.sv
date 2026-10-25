@@ -288,22 +288,23 @@ dpram_dc #(.widthad_a(9)) lbuf1
 
 // Boards drive the pools through their own port sets; the active one (by variant) is muxed onto the pools, the pool
 // outputs go to every board. M52 = variants 0 (Moon Patrol) and 1 (Alpha One), M58 = variant 3 (10-Yard Fight),
-// Traverse USA = variants 4-6 (Traverse USA family, Shot Rider, Shot Rider bootleg).
+// Traverse USA = variants 4-6 (Traverse USA family, Shot Rider, Shot Rider bootleg), M57 = variant 2 (Tropical Angel).
 wire m58_sel  = variant == 8'd3;
 wire trav_sel = variant >= 8'd4 && variant <= 8'd6;
-wire m52_sel  = ~m58_sel & ~trav_sel;
+wire m57_sel  = variant == 8'd2;
+wire m52_sel  = ~m58_sel & ~trav_sel & ~m57_sel;
 
-// per-board port bundles: [0] = M52, [1] = M58, [2] = Traverse USA
-chip_pool_pkg::z80pa_i_t bd_cpu_i[3];
-logic [16:0] bd_main_rom_a[3], bd_vid_rom_a[3];
-logic [11:0] bd_pal_a[3], bd_clut_a[3];
-logic [11:0] bd_wram_a[3], bd_vram_aa[3], bd_vram_ab[3], bd_xram_aa[3], bd_xram_ab[3];
-logic  [8:0] bd_sram_aa[3], bd_sram_ab[3], bd_lb_aa[3], bd_lb_ab[3];
-logic  [7:0] bd_wram_d[3], bd_vram_da[3], bd_sram_da[3], bd_xram_da[3], bd_lb_da[3], bd_snd_cmd[3], bd_hs_q[3];
-logic        bd_wram_we[3], bd_vram_wa[3], bd_sram_wa[3], bd_xram_wa[3], bd_snd_wr[3], bd_ce_pix[3];
-logic  [1:0] bd_lb_wa[3], bd_lb_wb[3];
-logic  [7:0] bd_r[3], bd_g[3], bd_b[3];
-logic        bd_hs[3], bd_vs[3], bd_hbl[3], bd_vbl[3];
+// per-board port bundles: [0] = M52, [1] = M58, [2] = Traverse USA, [3] = M57
+chip_pool_pkg::z80pa_i_t bd_cpu_i[4];
+logic [16:0] bd_main_rom_a[4], bd_vid_rom_a[4];
+logic [11:0] bd_pal_a[4], bd_clut_a[4];
+logic [11:0] bd_wram_a[4], bd_vram_aa[4], bd_vram_ab[4], bd_xram_aa[4], bd_xram_ab[4];
+logic  [8:0] bd_sram_aa[4], bd_sram_ab[4], bd_lb_aa[4], bd_lb_ab[4];
+logic  [7:0] bd_wram_d[4], bd_vram_da[4], bd_sram_da[4], bd_xram_da[4], bd_lb_da[4], bd_snd_cmd[4], bd_hs_q[4];
+logic        bd_wram_we[4], bd_vram_wa[4], bd_sram_wa[4], bd_xram_wa[4], bd_snd_wr[4], bd_ce_pix[4];
+logic  [1:0] bd_lb_wa[4], bd_lb_wb[4];
+logic  [7:0] bd_r[4], bd_g[4], bd_b[4];
+logic        bd_hs[4], bd_vs[4], bd_hbl[4], bd_vbl[4];
 assign {bd_xram_aa[0], bd_xram_ab[0], bd_xram_da[0], bd_xram_wa[0]} = '0;   // M52 / Traverse USA: no extra RAM
 assign {bd_xram_aa[2], bd_xram_ab[2], bd_xram_da[2], bd_xram_wa[2]} = '0;
 
@@ -369,7 +370,29 @@ trav_board trav
     .hs_address(hs_address), .hs_data_in(hs_data_in), .hs_data_out(bd_hs_q[2]), .hs_write(hs_write & trav_sel)
 );
 
-wire [1:0] bs = trav_sel ? 2'd2 : m58_sel ? 2'd1 : 2'd0;
+m57_board m57
+(
+    .clk(clk), .reset(reset), .pause(pause & m57_sel), .rom_rgn(rom_rgn),
+    .in0(in0), .in1(in1), .in2(in2), .dsw1(dsw1), .dsw2(dsw2),
+    .crt_flip(crt_flip), .h_adj(h_adj), .v_adj(v_adj),
+    .ce_pix(bd_ce_pix[3]), .video_r(bd_r[3]), .video_g(bd_g[3]), .video_b(bd_b[3]),
+    .video_hs(bd_hs[3]), .video_vs(bd_vs[3]), .video_hblank(bd_hbl[3]), .video_vblank(bd_vbl[3]),
+    .cpu_i(bd_cpu_i[3]), .cpu_o(z80pa_0_o),
+    .cpu_rom_a(bd_main_rom_a[3]), .cpu_rom_q(main_rom_q), .vid_rom_a(bd_vid_rom_a[3]), .vid_rom_q(rom0_qb),
+    .pal_a(bd_pal_a[3]), .pal_q(rom1_qb), .clut_a(bd_clut_a[3]), .clut_q(rom1_qa),
+    .wram_a(bd_wram_a[3]), .wram_d(bd_wram_d[3]), .wram_we(bd_wram_we[3]), .wram_q(wram_qa),
+    .vram_aa(bd_vram_aa[3]), .vram_da(bd_vram_da[3]), .vram_wa(bd_vram_wa[3]), .vram_qa(vram_qa),
+    .vram_ab(bd_vram_ab[3]), .vram_qb(vram_qb),
+    .sram_aa(bd_sram_aa[3]), .sram_da(bd_sram_da[3]), .sram_wa(bd_sram_wa[3]), .sram_ab(bd_sram_ab[3]), .sram_qb(sram_qb),
+    .xram_aa(bd_xram_aa[3]), .xram_da(bd_xram_da[3]), .xram_wa(bd_xram_wa[3]), .xram_qa(xram_qa),
+    .xram_ab(bd_xram_ab[3]), .xram_qb(xram_qb),
+    .lb_aa(bd_lb_aa[3]), .lb_da(bd_lb_da[3]), .lb_wa(bd_lb_wa[3]), .lb_ab(bd_lb_ab[3]), .lb_wb(bd_lb_wb[3]),
+    .lb_qb0(lb0_qb), .lb_qb1(lb1_qb),
+    .snd_wr(bd_snd_wr[3]), .snd_cmd(bd_snd_cmd[3]),
+    .hs_address(hs_address), .hs_data_in(hs_data_in), .hs_data_out(bd_hs_q[3]), .hs_write(hs_write & m57_sel)
+);
+
+wire [1:0] bs = m57_sel ? 2'd3 : trav_sel ? 2'd2 : m58_sel ? 2'd1 : 2'd0;
 assign z80pa_0_i  = bd_cpu_i[bs];
 assign main_rom_a = bd_main_rom_a[bs];
 assign rom0_ab    = bd_vid_rom_a[bs];
