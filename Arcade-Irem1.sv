@@ -4,7 +4,7 @@
 //  Copyright (C) 2026 Rodimus
 //
 //  Top level carried over from the Rodimus Konami82 core (Pac-Man core lineage, MikeJ / Sorgelig).
-//  Boards: M52 (Moon Patrol, Alpha One) + the Irem sound board (rtl/irem1_board.sv dispatcher).
+//  Boards: M52, M57, M58, Traverse USA + the Irem sound board (rtl/irem1_board.sv dispatcher).
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a
 //  copy of this software and associated documentation files (the "Software"),
@@ -145,7 +145,7 @@ localparam CONF_STR = {
 	"P1OGI,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%,CRT 75%;",
 	"-;",
 	"H1P2,Game Options;",
-	"H1P2-,Artwork (MAME layout views);",
+	"H1P2-,Artwork (layout views);",
 	"H1P2O[52:49],View,Off,View 1,View 2,View 3,View 4,View 5,View 6,View 7,View 8,View 9,View 10,View 11,View 12,View 13,View 14,View 15;",
 	"H1P2O[53],Backdrop,On,Off;",
 	"H1P2O[54],Overlay,On,Off;",
@@ -235,135 +235,6 @@ pll_cfg pll_cfg
 // Hold the board in reset until the PLL is locked and the ROM download has finished
 wire reset = RESET | status[0] | buttons[1] | ioctl_download | ~locked;
 
-// CTL2-2026-10-25: inputs -> controllers.sv v2 (rtl/mister_custom/controllers.sv, Konami82 integration); keys act on
-// press, pad 2's Start = Start 2 only, coin impulse / toggle freeze on pause. Original block commented out below.
-// ///////////////////         Keyboard           //////////////////
-//
-// reg kb_up = 0, kb_down = 0, kb_left = 0, kb_right = 0;
-// reg kb_b1 = 0, kb_b2 = 0;
-// reg kb_coin1 = 0, kb_coin2 = 0, kb_start1 = 0, kb_start2 = 0, kb_pause = 0, kb_service = 0, kb_tilt = 0;
-//
-// wire       pressed = ~ps2_key[9];
-// wire [7:0] code    = ps2_key[7:0];
-//
-// always @(posedge CLK_SYS) begin
-// 	reg old_state;
-// 	old_state <= ps2_key[10];
-// 	if (old_state != ps2_key[10]) begin
-// 		case (code)
-// 			'h16: kb_start1  <= pressed; // 1
-// 			'h1E: kb_start2  <= pressed; // 2
-// 			'h2E: kb_coin1   <= pressed; // 5
-// 			'h36: kb_coin2   <= pressed; // 6
-// 			'h46: kb_service <= pressed; // 9
-// 			'h2C: kb_tilt    <= pressed; // T
-// 			'h4D: kb_pause   <= pressed; // P
-//
-// 			'h75: kb_up      <= pressed; // up
-// 			'h72: kb_down    <= pressed; // down
-// 			'h6B: kb_left    <= pressed; // left
-// 			'h74: kb_right   <= pressed; // right
-// 			'h14: kb_b1      <= pressed; // ctrl
-// 			'h11: kb_b2      <= pressed; // alt
-// 		endcase
-// 	end
-// end
-//
-// //////////////////  Arcade Buttons/Interfaces   ///////////////////////////
-//
-// // Joystick bits: 0 R, 1 L, 2 D, 3 U, 4-7 Btn 1-4, 8 Coin, 9 Start 1P, 10 Start 2P, 11 Pause, 12-13 Btn 5-6, 14 Rack Test (unmapped)
-// wire [3:0] dir1_raw = {joystick_0[3] | kb_up, joystick_0[2] | kb_down, joystick_0[1] | kb_left, joystick_0[0] | kb_right};
-// wire [3:0] dir2_raw = joystick_1[3:0];
-// wire [3:0] dir1, dir2;   // {U, D, L, R}
-//
-// joy4way joy4way_1(.clk(CLK_SYS), .en(game_flags[0]), .in(dir1_raw), .out(dir1));
-// joy4way joy4way_2(.clk(CLK_SYS), .en(game_flags[0]), .in(dir2_raw), .out(dir2));
-//
-// wire m_pause = joystick_0[11] | kb_pause;
-//
-// // MAME PORT_IMPULSE(2): a coin press is latched, then held for exactly two frames from the next vblank.
-// // TODO(board): Moon Patrol's SERVICE1 is PORT_IMPULSE(19), not a coin; extend when the M52 board lands.
-// wire       coin1_raw = joystick_0[8] | kb_coin1;
-// wire       coin2_raw = joystick_1[8] | kb_coin2;
-// reg        coin1_d = 1'b0, coin2_d = 1'b0, coin1_pend = 1'b0, coin2_pend = 1'b0, imp_vbl = 1'b0;
-// reg  [1:0] coin1_frames = 2'd0, coin2_frames = 2'd0;
-// always @(posedge CLK_SYS) begin
-// 	coin1_d <= coin1_raw;
-// 	coin2_d <= coin2_raw;
-// 	imp_vbl <= vblank;
-// 	if (coin1_raw & ~coin1_d) coin1_pend <= 1'b1;
-// 	if (coin2_raw & ~coin2_d) coin2_pend <= 1'b1;
-// 	if (vblank & ~imp_vbl) begin
-// 		if (coin1_pend)                begin coin1_frames <= 2'd2; coin1_pend <= 1'b0; end
-// 		else if (coin1_frames != 2'd0) coin1_frames <= coin1_frames - 2'd1;
-// 		if (coin2_pend)                begin coin2_frames <= 2'd2; coin2_pend <= 1'b0; end
-// 		else if (coin2_frames != 2'd0) coin2_frames <= coin2_frames - 2'd1;
-// 	end
-// end
-// wire coin1 = game_flags[2] ? |coin1_frames : coin1_raw;
-// wire coin2 = game_flags[2] ? |coin2_frames : coin2_raw;
-//
-// // Rack Test cheat: held (MAME DIP with a key), or flipped on each press (MAME PORT_TOGGLE)
-// wire rack_btn = joystick_0[14] | joystick_1[14];
-// reg  rack_d = 1'b0, rack_tog = 1'b0;
-// always @(posedge CLK_SYS) begin
-// 	rack_d <= rack_btn;
-// 	if (ioctl_download)          rack_tog <= 1'b0;
-// 	else if (rack_btn & ~rack_d) rack_tog <= ~rack_tog;
-// end
-//
-// // Twin stick (Crazy Climber pattern): right-hand stick = right analog stick, or Btn 3-6 = R Right / Left / Down / Up
-// wire signed [7:0] rx0 = joystick_r_analog_0[7:0], ry0 = joystick_r_analog_0[15:8];
-// wire signed [7:0] rx1 = joystick_r_analog_1[7:0], ry1 = joystick_r_analog_1[15:8];
-// wire [3:0] rstick0 = {ry0 < -8'sd48, ry0 > 8'sd48, rx0 < -8'sd48, rx0 > 8'sd48};   // {U, D, L, R}
-// wire [3:0] rstick1 = {ry1 < -8'sd48, ry1 > 8'sd48, rx1 < -8'sd48, rx1 > 8'sd48};
-//
-// // control ids used by the MRA input map (same numbering as the Konami82 / Pac-Man cores; 24-31 reserved for analog)
-// // Never link pads: P2's Start is Start 2P only (id 20 from either pad's Start 2P button, as in Konami82)
-// wire [63:0] ctl =
-// {
-// 	18'd0,
-// 	joystick_1[13] | rstick1[3],                    // 45 P2 R Up    (Btn 6)
-// 	joystick_1[12] | rstick1[2],                    // 44 P2 R Down  (Btn 5)
-// 	joystick_1[7]  | rstick1[1],                    // 43 P2 R Left  (Btn 4)
-// 	joystick_1[6]  | rstick1[0],                    // 42 P2 R Right (Btn 3)
-// 	joystick_0[13] | rstick0[3],                    // 41 P1 R Up    (Btn 6)
-// 	joystick_0[12] | rstick0[2],                    // 40 P1 R Down  (Btn 5)
-// 	joystick_0[7]  | rstick0[1],                    // 39 P1 R Left  (Btn 4)
-// 	joystick_0[6]  | rstick0[0],                    // 38 P1 R Right (Btn 3)
-// 	rack_tog,                                       // 37 rack test (toggle)
-// 	rack_btn,                                       // 36 rack test (held)
-// 	joystick_1[13:12],                              // 35-34 P2 Btn 6-5
-// 	joystick_0[13:12],                              // 33-32 P1 Btn 6-5
-// 	8'd0,                                           // 31-24 reserved
-// 	1'b0,                                           // 23 coin 3
-// 	kb_service,                                     // 22 service
-// 	kb_tilt,                                        // 21 tilt
-// 	joystick_0[10] | joystick_1[10] | kb_start2,    // 20 start 2
-// 	joystick_0[9]  | joystick_1[9]  | kb_start1,    // 19 start 1
-// 	coin2,                                          // 18 coin 2
-// 	coin1,                                          // 17 coin 1
-// 	joystick_1[7:4],                                // 16-13 P2 Btn 4-1
-// 	dir2[0], dir2[1], dir2[2], dir2[3],             // 12 R, 11 L, 10 D, 9 U
-// 	joystick_0[7:6], joystick_0[5] | kb_b2, joystick_0[4] | kb_b1,   // 8-5 P1 Btn 4-1
-// 	dir1[0], dir1[1], dir1[2], dir1[3],             // 4 R, 3 L, 2 D, 1 U
-// 	1'b0                                            // 0 none
-// };
-//
-// // DIP switches arrive from the OSD via ioctl index 254
-// reg [7:0] dip_sw[8] = '{8'hFF,8'hFF,8'hFF,8'hFF,8'h00,8'h00,8'h00,8'h00};
-// always @(posedge CLK_SYS) begin
-// 	if (ioctl_wr && (ioctl_index == 8'd254) && !ioctl_addr[24:3])
-// 		dip_sw[ioctl_addr[2:0]] <= ioctl_dout;
-// end
-//
-// reg [7:0] in_port[6];
-// always @(posedge CLK_SYS) begin
-// 	for (int p = 0; p < 6; p++)
-// 		for (int b = 0; b < 8; b++)
-// 			in_port[p][b] <= (port_dip[p][7] ? port_idle[p][b] : dip_sw[port_dip[p][2:0]][b]) ^ ctl[in_map[p*8 + b]];
-// end
-
 ///////////////////         Keyboard           //////////////////
 
 wire [12:0] kb;
@@ -382,7 +253,7 @@ ctl_joy4way joy4way_2(.clk(CLK_SYS), .en(game_flags[0]), .in(dir2_raw), .out(dir
 
 wire m_pause = joystick_0[11] | kb[12];
 
-// MAME PORT_IMPULSE(2) coins (MRA flag); Moon Patrol's SERVICE1 PORT_IMPULSE(19) is the service key, left as a level
+// Coins are 2-frame impulses (MRA flag); Moon Patrol's service key stays a level
 wire coin1, coin2;
 ctl_coin_impulse #(.PAUSE_MODE(1)) coin_imp1(.clk(CLK_SYS), .pause(pause_cpu), .vblank(vblank), .en(game_flags[2]),
                            .coin_raw(joystick_0[8] | kb[8]), .coin(coin1));
@@ -467,7 +338,7 @@ wire ce_pix;
 wire        bd_hs, bd_vs, bd_hbl, bd_vbl;
 wire  [7:0] bd_r, bd_g, bd_b;
 
-// MAME artwork (ioctl index 5, OSD Game Options page): native composite on the core video (one pixel late),
+// Artwork (ioctl index 5, OSD Game Options page): native composite on the core video (one pixel late),
 // full view through the DDR3 framebuffer on HDMI
 wire        art_run, art_ddr;
 wire [31:0] art_fb_base;
@@ -548,7 +419,7 @@ arcade_video #(256,24) arcade_video
 ///////////////                 Board                  ////////////////
 
 // Flip: CRT Flip (status[22]) turns the board's own raster 180 degrees on every board (HDMI follows it; HDMI Flip
-// on top, as in Konami82); the board's game flip (MAME flipscreen_w + DIP) stays separate inside each board.
+// on top, as in Konami82); the board's game flip stays separate inside each board.
 irem1_board board
 (
 	.clk(CLK_SYS),
@@ -623,33 +494,3 @@ hiscore #(
 );
 
 endmodule
-
-// CTL2-2026-10-25: local joy4way replaced by ctl_joy4way (rtl/mister_custom/controllers.sv). Original commented out below.
-// // 4-way joystick: the most recently pressed direction wins (from the MiSTer Pac-Man port)
-// module joy4way
-// (
-// 	input        clk,
-// 	input        en,
-// 	input  [3:0] in,
-// 	output [3:0] out
-// );
-//
-// reg  [3:0] mask = 4'hF;
-// reg  [3:0] in1 = 0, in2 = 0;
-// wire [3:0] innew = in1 & ~in2;
-//
-// assign out = in1 & mask;
-//
-// always @(posedge clk) begin
-// 	in1 <= in;
-// 	in2 <= in1;
-//
-// 	if (innew[0]) mask <= 4'b0001;
-// 	if (innew[1]) mask <= 4'b0010;
-// 	if (innew[2]) mask <= 4'b0100;
-// 	if (innew[3]) mask <= 4'b1000;
-//
-// 	if (!(in & mask) || !en) mask <= 4'hF;
-// end
-//
-// endmodule

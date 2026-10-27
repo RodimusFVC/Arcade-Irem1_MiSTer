@@ -2,19 +2,19 @@
 //
 //  m58_board - Irem M58 board set (10-Yard Fight family, variant 3)
 //  Copyright (C) 2026 Rodimus
+//  Based on MAME irem/m58.cpp (BSD-3-Clause; Lee Taylor) and the 10-Yard Fight manual schematics p31-41
+//  (M58-A-A CPU / tilemap, M58-B-A timing / sprites / radar panel).
 //
-//  M58-A-A (CPU, tilemap) + M58-B-A (timing, sprites, radar panel), 10-Yard Fight manual schematics p31-41 (facts in
-//  Claude/irem1_schematic_facts.md) + MAME irem/m58.cpp. Same pool ports as m52_board.
-//
-//  Raster: 384 x 282 at 6.144 MHz (as M52). Visible = MAME m58: x 0-255, y 42-265 (224 lines = the drawing's VBLANK
-//  272-495); IRQ0 at y 266, held until acknowledged.
-//  Layers (MAME screen_update): opaque 64 x 32 tilemap (8x8, 3 bpp, scroll x 9 bits / y 8 bits, dy 26), sprites
-//  (24 x 16x32 = two stacked 16x16), radar / score panel bitmap on top (x 208-255, written at 9000-9FFF, A800 = off).
+//  Same pool ports as m52_board.
+//  Raster: 384 x 282 at 6.144 MHz (as M52). Visible x 0-255, y 42-265 (224 lines = the drawing's VBLANK 272-495);
+//  IRQ0 at y 266, held until acknowledged.
+//  Layers: opaque 64 x 32 tilemap (8x8, 3 bpp, scroll x 9 bits / y 8 bits, dy 26), sprites (24 x 16x32 = two
+//  stacked 16x16), radar / score panel bitmap on top (x 208-255, written at 9000-9FFF, A800 = off).
 //  Colours: tilemap and panel = two 4-bit PROMs each (low / high nibble), sprites = lookup PROM + 32 x 8 PROM.
 //  Pixel pipeline: fetched in the 8 clocks of h, two palette reads at ph6 / ph7, colour formed at ph0 of h + 1,
 //  output during h + 2; blank and sync delayed to match.
 //  Flip (game flip XOR CRT Flip): raster mirror about the visible window (x -> 255 - x, y -> 307 - y).
-//  Not modelled: Z80 /WAIT from both video boards (drawing p33 / p41; MAME does not model it either).
+//  Not modelled: Z80 /WAIT from both video boards (drawing p33 / p41).
 //
 //============================================================================
 
@@ -74,7 +74,7 @@ wire [16:0] rom_len   = {rom_rgn[5][0],  rom_rgn[4],  8'h00};
 wire [16:0] tx_base   = {rom_rgn[13][0], rom_rgn[12], 8'h00};
 wire [16:0] sp_base   = {rom_rgn[19][0], rom_rgn[18], 8'h00};
 wire [11:0] prom      = {rom_rgn[42][3:0], 8'h00};
-// PROM block (MAME ROM_START order): char lo +000, char hi +100, sprite pal +200, sprite lookup +220,
+// PROM block: char lo +000, char hi +100, sprite pal +200, sprite lookup +220,
 // radar lo +320, radar hi +420
 wire [11:0] CH_LO = prom, CH_HI = prom + 12'h100, SP_PAL = prom + 12'h200, SP_CLUT = prom + 12'h220,
             RD_LO = prom + 12'h320, RD_HI = prom + 12'h420;
@@ -122,7 +122,7 @@ always_ff @(posedge clk) begin
     else if (ce_pix && hcnt == 9'd383 && vcnt == 9'd265) int_n <= 1'b0;       // start of line 266
 end
 
-// MAME yard_map (no mirrors): 0000-5FFF ROM, 8000-8FFF video RAM, 9000-9FFF panel (write only), A000 / A200 / A400 /
+// Memory map: 0000-5FFF ROM, 8000-8FFF video RAM, 9000-9FFF panel (write only), A000 / A200 / A400 /
 // A800 scroll x low / high, scroll y, panel off, C820-C87F sprites, D000-D004 I/O, E000-EFFF RAM
 wire sel_rom  = a < 16'h6000;
 wire sel_vram = a[15:12] == 4'h8;
@@ -187,7 +187,7 @@ always_comb begin
     else if (sel_sprt) cpu_di = sram_qa;
     else if (sel_io)   cpu_di = io_q;
     else if (sel_wram) cpu_di = wram_q;
-    else               cpu_di = 8'h00;                                       // MAME unmapped read
+    else               cpu_di = 8'h00;                                       // unmapped read
 end
 
 // per-field assigns: Quartus 17 rejects assignment patterns with non-constant members (error 10734)
@@ -279,7 +279,7 @@ always_comb begin
     endcase
 end
 
-// resistor DACs (MAME m58 palette, values match the drawing): tilemap / panel red 470-220, green / blue
+// resistor DACs (values match the drawing): tilemap / panel red 470-220, green / blue
 // 1K-470-220; sprites the same with the 470 ohm pull-down per gun
 function automatic [7:0] w3(input [2:0] v);
     case (v) 3'd0: w3 = 8'd0; 3'd1: w3 = 8'd33; 3'd2: w3 = 8'd71; 3'd3: w3 = 8'd104;
@@ -315,7 +315,7 @@ end
 
 /////////////////////////////  Sprite engine (one line ahead)  /////////////////////////////
 
-// MAME draw_sprites: offsets 0x5C down to 0x00 (0x00 on top). [0] y (top = 42 + 210 - y), [1] flip y / flip x / bank /
+// Sprites: offsets 0x5C down to 0x00 (0x00 on top). [0] y (top = 42 + 210 - y), [1] flip y / flip x / bank /
 // colour (5 bits), [2] code (bit 6 cleared; the lower 16x16 half = code + 0x40, swapped when flipped in y), [3] x.
 // 3 planes at 0x8000 (pen bit 2), 0x4000, 0x0000; lookup {colour, pen}; lookup value 0 = transparent.
 typedef enum logic [2:0] {S_IDLE, S_ATTR, S_CHECK, S_FETCH, S_DRAW, S_NEXT} sstate_t;

@@ -2,19 +2,17 @@
 //
 //  trav_board - Irem Traverse USA board (variant 4: travrusa family; 5: Shot Rider; 6: Shot Rider bootleg)
 //  Copyright (C) 2026 Rodimus
+//  Based on MAME irem/travrusa.cpp (BSD-3-Clause; Lee Taylor). No schematics available (manuals: pinout / DIPs only).
 //
-//  No schematics found (Traverse USA manuals: pinout / DIPs only): MAME irem/travrusa.cpp is the model.
 //  Same pool ports as m52_board / m58_board.
-//
-//  Raster: 384 x 282 at 6.144 MHz; visible x 8-247, y 0-255 (MAME set_raw); IRQ0 = VBLANK level (MAME
-//  screen_vblank -> IRQ0, asserted for lines 256-281). Screen ROT270 (Shot Rider also ORIENTATION_FLIP_X = native
-//  x mirrored here).
+//  Raster: 384 x 282 at 6.144 MHz; visible x 8-247, y 0-255; IRQ0 = VBLANK level (asserted for lines 256-281).
+//  Screen is ROT270 (Shot Rider also mirrored in x).
 //  Tilemap 64 x 32, 8x8 3 bpp, flip x / y per tile; rows 0-191 scroll x (9 bits), rows 192-255 fixed (status band).
-//  Colour 15 tiles = "tunnels": their pens 6 and 7 are drawn above the sprites (MAME split group 1).
+//  Colour 15 tiles = "tunnels": their pens 6 and 7 are drawn above the sprites.
 //  Sprites: 128 x 16x16 3 bpp (offset 0x1FC first, 0x000 on top), pen 0 transparent, clipped to y 0-191 / x 8-247;
 //  colour lookup PROM -> 16-entry sprite palette.
 //  CPU ROM decode on read (index 1 byte 2): 1 = MotoRace (0000-1FFF address + data bitswap), 2 = Shot Rider Sigma
-//  (0000-1FFF data bitswap). Shot Rider (variant 5): Z80 at 6 MHz (MAME), own palette wiring and sprite layout;
+//  (0000-1FFF data bitswap). Shot Rider (variant 5): Z80 at 6 MHz, own palette wiring and sprite layout;
 //  the bootleg (6) reads 0x88 from I/O port 0x11.
 //  Pixel pipeline as m58_board (two palette reads, ph6 / ph7; output at h + 2). Flip (game XOR CRT): raster mirror.
 //
@@ -80,7 +78,7 @@ wire [16:0] rom_len   = {rom_rgn[5][0],  rom_rgn[4],  8'h00};
 wire [16:0] tx_base   = {rom_rgn[13][0], rom_rgn[12], 8'h00};
 wire [16:0] sp_base   = {rom_rgn[19][0], rom_rgn[18], 8'h00};
 wire [11:0] prom      = {rom_rgn[42][3:0], 8'h00};
-// PROM block (MAME region offsets): tile palette +000 (Shot Rider: second tile PROM +100), sprite palette +200,
+// PROM block: tile palette +000 (Shot Rider: second tile PROM +100), sprite palette +200,
 // sprite lookup +220
 wire [11:0] TP0 = prom, TP1 = prom + 12'h100, SP_PAL = prom + 12'h200, SP_CLUT = prom + 12'h220;
 
@@ -119,12 +117,12 @@ logic mem_wr_d = 1'b0;
 always_ff @(posedge clk) mem_wr_d <= mem_wr;
 wire mem_wstb = mem_wr & ~mem_wr_d;
 
-// 3.072 MHz (Shot Rider 6.144 MHz: MAME 6 MHz), CEN_p / CEN_n half a cycle apart
+// 3.072 MHz (Shot Rider 6.144 MHz), CEN_p / CEN_n half a cycle apart
 wire [3:0] c16 = {hcnt[0], ph};
 wire cen_p = shtrider ? ph == 3'd0 : c16 == 4'd0;
 wire cen_n = shtrider ? ph == 3'd4 : c16 == 4'd8;
 
-// MAME program_map (no mirrors): 0000-7FFF ROM, 8000-8FFF video RAM, 9000 / A000 scroll x low / high (write),
+// Memory map: 0000-7FFF ROM, 8000-8FFF video RAM, 9000 / A000 scroll x low / high (write),
 // C800-C9FF sprites (write only), D000-D004 I/O, E000-EFFF RAM
 wire sel_rom  = ~a[15];
 wire sel_vram = a[15:12] == 4'h8;
@@ -133,7 +131,7 @@ wire sel_sprt = a[15:9] == 7'b1100100;                                       // 
 wire sel_io   = a[15:3] == 13'h1A00 && a[2:0] <= 3'd4;
 wire sel_wram = a[15:12] == 4'hE;
 
-// ROM decode on read (MAME init_motorace / init_shtridra rewrote 0000-1FFF at load; here the read is undone)
+// ROM decode on read: the 0000-1FFF bitswap is undone per read, never at load
 wire        dec_lo = a[15:13] == 3'b000;
 wire [15:0] a_mr   = {a[15:13], a[7], a[0], a[6], a[12], a[5], a[11], a[4], a[10], a[3], a[9], a[2], a[8], a[1]};
 wire [15:0] a_rd   = (rom_dec == 4'd1 && dec_lo) ? a_mr : a;
@@ -181,19 +179,19 @@ endcase
 logic [7:0] cpu_di;
 always_comb begin
     if (int_ack)       cpu_di = 8'hFF;
-    else if (io_rd)    cpu_di = (shtriderb && a[7:0] == 8'h11) ? 8'h88 : 8'h00;   // MAME shtriderb_port11_r
+    else if (io_rd)    cpu_di = (shtriderb && a[7:0] == 8'h11) ? 8'h88 : 8'h00;
     else if (sel_rom)  cpu_di = rom_in ? rom_d : 8'h00;
     else if (sel_vram) cpu_di = vram_qa;
     else if (sel_io)   cpu_di = io_q;
     else if (sel_wram) cpu_di = wram_q;
-    else               cpu_di = 8'h00;                                       // MAME unmapped read
+    else               cpu_di = 8'h00;                                       // unmapped read
 end
 
 assign cpu_i.reset_n = 1'b1;
 assign cpu_i.cen_p   = cen_p && !pause;
 assign cpu_i.cen_n   = cen_n && !pause;
 assign cpu_i.wait_n  = 1'b1;
-assign cpu_i.int_n   = ~vblank_raw;                                          // MAME: IRQ0 = VBLANK level
+assign cpu_i.int_n   = ~vblank_raw;                                          // IRQ0 = VBLANK level
 assign cpu_i.nmi_n   = 1'b1;
 assign cpu_i.di      = cpu_di;
 
@@ -209,7 +207,7 @@ wire [8:0] gyn = flip ? 9'd255 - vn : vn;
 /////////////////////////////  Per-pixel fetch (8 clocks)  /////////////////////////////
 
 // tilemap: rows 0-191 x = gx + scroll x, rows 192-255 x = gx; y = gy; tile at video RAM byte {row, col, b}:
-// b 0 = code, b 1 = attr (code bits 9-8 = attr 7-6, flip x / y = attr 5 / 4 (MAME TILE_FLIPXY), colour = attr 3-0)
+// b 0 = code, b 1 = attr (code bits 9-8 = attr 7-6, flip x / y = attr 5 / 4 , colour = attr 3-0)
 wire [7:0] my = gy[7:0];
 wire [8:0] mx = gx + ((my[7:6] == 2'd3) ? 9'd0 : {scrollx_hi[0], scrollx_lo});
 wire [10:0] t_idx = {my[7:3], mx[8:3]};
@@ -267,7 +265,7 @@ always_comb begin
     endcase
 end
 
-// MAME travrusa_palette: r = 0x52 / 0xAD (bits 6, 7), g / b = 0x21 / 0x47 / 0x97 (bits 3-5 / 0-2).
+// Traverse USA palette: r = 0x52 / 0xAD (bits 6, 7), g / b = 0x21 / 0x47 / 0x97 (bits 3-5 / 0-2).
 // shtrider_palette: tiles r = 0x47 / 0x97 (p0 bits 2, 3), g = 0x21 (p1 bit 3) / 0x47 / 0x97 (p0 bits 0, 1),
 // b = p1 bits 0-2; sprites r = 0x47 / 0x97 (bits 6, 7), g / b as Traverse USA.
 function automatic [7:0] w3(input [2:0] v);
@@ -306,7 +304,7 @@ end
 
 /////////////////////////////  Sprite engine (one line ahead)  /////////////////////////////
 
-// MAME draw_sprites: offsets 0x1FC down to 0x000 (0x000 on top). [0] y (top = 240 - y), [1] flip y / flip x /
+// Sprites: offsets 0x1FC down to 0x000 (0x000 on top). [0] y (top = 240 - y), [1] flip y / flip x /
 // colour (4 bits), [2] code, [3] x (((x + 8) & 0xFF) - 8). 3 planes at 0x4000 (pen bit 2), 0x2000, 0x0000.
 // Traverse USA layout: right half +16 bytes, row = byte; Shot Rider: right half +8, rows 8-15 at +16.
 // Pen 0 transparent; line buffer = {opaque, lookup value}. Clip: y 0-191, x 8-247.

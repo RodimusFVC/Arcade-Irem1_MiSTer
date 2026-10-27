@@ -2,13 +2,13 @@
 //
 //  m57_board - Irem M57 board (Tropical Angel, New Tropical Angel; variant 2)
 //  Copyright (C) 2026 Rodimus
+//  Based on MAME irem/m57.cpp (BSD-3-Clause; Phil Stroffolino). No schematics available.
 //
-//  No schematics found: MAME irem/m57.cpp is the model. Same pool ports as the other boards (+ xram = scroll RAM).
-//
-//  Raster: 384 x 282 at 6.144 MHz; visible x 8-247, y 8-247 (MAME set_raw); IRQ0 at y 248, held until acknowledged.
+//  Same pool ports as the other boards (+ xram = scroll RAM).
+//  Raster: 384 x 282 at 6.144 MHz; visible x 8-247, y 8-247; IRQ0 at y 248, held until acknowledged.
 //  Tilemap 32 x 32 (8x8, 3 bpp, flip x / y per tile), opaque. Lines 64-127: x scroll = scroll RAM 0x40. Lines 128 and
 //  below ("sea"): each line shifted by the signed 16-bit scroll RAM [y] | [y + 0x100] << 8; a shifted-in pixel
-//  repeats the edge (MAME draw_background copies within the visible bitmap, clamped to x 8-247).
+//  repeats the edge (clamped to x 8-247).
 //  Sprites: 56 x 16x32 3 bpp (offset 0xDC first, 0x00 on top), 4 banks (code bit 7, attr bit 5); planes MSB first
 //  (0x0000 = pen bit 2); colour = ~lookup & 15 into the 16-entry sprite palette, lookup 0 = transparent.
 //  Pixel pipeline as m58_board (two palette reads, ph6 / ph7; output at h + 2). Flip (game XOR CRT): raster mirror.
@@ -71,7 +71,7 @@ wire [16:0] rom_len   = {rom_rgn[5][0],  rom_rgn[4],  8'h00};
 wire [16:0] tx_base   = {rom_rgn[13][0], rom_rgn[12], 8'h00};
 wire [16:0] sp_base   = {rom_rgn[19][0], rom_rgn[18], 8'h00};
 wire [11:0] prom      = {rom_rgn[42][3:0], 8'h00};
-// PROM block (MAME region offsets): char palette low +000, high +100, sprite palette +200, sprite lookup +220
+// PROM block: char palette low +000, high +100, sprite palette +200, sprite lookup +220
 wire [11:0] CH_LO = prom, CH_HI = prom + 12'h100, SP_PAL = prom + 12'h200, SP_CLUT = prom + 12'h220;
 
 /////////////////////////////  Raster  /////////////////////////////
@@ -116,7 +116,7 @@ always_ff @(posedge clk) begin
     else if (ce_pix && hcnt == 9'd383 && vcnt == 9'd247) int_n <= 1'b0;       // start of line 248
 end
 
-// MAME main_map (no mirrors): 0000-7FFF ROM, 8000-87FF video RAM, 9000-91FF scroll RAM, C820-C8FF sprites (write
+// Memory map: 0000-7FFF ROM, 8000-87FF video RAM, 9000-91FF scroll RAM, C820-C8FF sprites (write
 // only), D000-D004 I/O, E000-E7FF RAM
 wire sel_rom  = ~a[15];
 wire sel_vram = a[15:11] == 5'b10000;
@@ -167,7 +167,7 @@ always_comb begin
     else if (sel_scrl) cpu_di = xram_qa;
     else if (sel_io)   cpu_di = io_q;
     else if (sel_wram) cpu_di = wram_q;
-    else               cpu_di = 8'h00;                                       // MAME unmapped read
+    else               cpu_di = 8'h00;                                       // unmapped read
 end
 
 assign cpu_i.reset_n = 1'b1;
@@ -218,7 +218,7 @@ wire        [7:0] my     = gy[7:0];
 wire        [7:0] mx     = (my >= 8'd128) ? sx_sea[7:0] : (my >= 8'd64) ? 8'(gx[7:0] + sc40) : gx[7:0];
 wire        [9:0] t_idx  = {my[7:3], mx[7:3]};
 logic [7:0] t_attr, t_code, t_p0, t_p1, t_p2;
-// video RAM byte 0 = attr (code bits 9-8 = attr 7-6, flip x / y = attr 5 / 4 (MAME TILE_FLIPXY), colour = 3-0),
+// video RAM byte 0 = attr (code bits 9-8 = attr 7-6, flip x / y = attr 5 / 4 , colour = 3-0),
 // byte 1 = code
 wire  [9:0] t_tile_now = {t_attr[7:6], vram_qb};      // ph2: code byte arriving
 wire  [9:0] t_tile     = {t_attr[7:6], t_code};
@@ -259,7 +259,7 @@ wire [7:0] spr_now = gy[0] ? lb_qb1 : lb_qb0;
 logic       k_spr, k_spr_d;
 logic [7:0] pidx, pidx_d;
 always_comb begin
-    if (spr_now[3:0] != 4'd0) begin k_spr = 1'b1; pidx = {4'd0, ~spr_now[3:0]};  end   // MAME: ~lookup & 15
+    if (spr_now[3:0] != 4'd0) begin k_spr = 1'b1; pidx = {4'd0, ~spr_now[3:0]};  end   // ~lookup & 15
     else                      begin k_spr = 1'b0; pidx = {1'b0, t_attr[3:0], t_pen}; end
 end
 always_comb begin
@@ -271,7 +271,7 @@ always_comb begin
     endcase
 end
 
-// MAME m57 palette: chars r = 0x47 / 0x97 (high PROM bits 2, 3), g = 0x21 (low bit 3) / 0x47 / 0x97 (high bits 0, 1),
+// Palette: chars r = 0x47 / 0x97 (high PROM bits 2, 3), g = 0x21 (low bit 3) / 0x47 / 0x97 (high bits 0, 1),
 // b = 0x21 / 0x47 / 0x97 (low bits 0-2); sprites r = 0x47 / 0x97 (bits 6, 7), g bits 3-5, b bits 0-2
 function automatic [7:0] w3(input [2:0] v);
     case (v) 3'd0: w3 = 8'd0; 3'd1: w3 = 8'd33; 3'd2: w3 = 8'd71; 3'd3: w3 = 8'd104;
@@ -299,7 +299,7 @@ end
 
 /////////////////////////////  Sprite engine (one line ahead)  /////////////////////////////
 
-// MAME draw_sprites: offsets 0xDC down to 0x00 (0x00 on top) at C820. [0] y (top = ((224 - y - 32) & 0xFF) + 32),
+// Sprites: offsets 0xDC down to 0x00 (0x00 on top) at C820. [0] y (top = ((224 - y - 32) & 0xFF) + 32),
 // [1] flip y / flip x / bank bit 1 / colour (5 bits), [2] bank bit 0 (bit 7) / tile (bits 5-0), [3] x.
 // 16x32: rows 0-15 at +0, rows 16-31 at +0x800; right half +16; tile * 32; bank * 0x1000;
 // planes 0x0000 (pen bit 2), 0x4000, 0x8000 (pen bit 0).

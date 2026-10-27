@@ -1,16 +1,14 @@
 //============================================================================
 //
-//  m6803 - MC6803 (MC6801 without internal ROM) in expanded multiplexed mode, around jt680x (Jose Tejada,
-//  6801 microcode, unmodified). Copyright (C) 2026 Rodimus
+//  m6803 - MC6803 (MC6801 without internal ROM) in expanded multiplexed mode, around jt680x
+//  (Jose Tejada, 6801 microcode, unmodified). Copyright (C) 2026 Rodimus
+//  Timer and port behaviour based on MAME m6801 (BSD-3-Clause, Aaron Giles).
 //
-//  Written for the Irem sound boards (M52-SOUND-C / M62), which run the 6803 from external ROM: everything
-//  outside the on-chip registers (0x00-0x1F) and RAM (0x80-0xFF) is an external access (x_cs). Ports 3 / 4 are the
-//  multiplexed bus on a 6803, so only ports 1 and 2 are modelled. Timer = free-running counter, output compare
-//  and overflow (MAME m6801 behaviour); input capture and the SCI are not used by these boards (registers only).
+//  Used by the Irem sound boards (M52-SOUND-C / M62). Addresses outside the on-chip registers (0x00-0x1F) and
+//  RAM (0x80-0xFF) are external (x_cs). Only ports 1 and 2 are modelled; timer = free-running counter with
+//  output compare and overflow; input capture and the SCI are register stubs.
 //
-//  cen = the crystal rate (4 x E), as jt680x expects. Bus signals change on cen and are held until the next one, so
-//  external read data only has to be valid by the next cen.
-//  Port outputs follow MAME: (data & ddr) | ~ddr, i.e. input bits read high outside the chip.
+//  cen = crystal rate (4 x E). Port outputs are (data & ddr) | ~ddr.
 //
 //============================================================================
 

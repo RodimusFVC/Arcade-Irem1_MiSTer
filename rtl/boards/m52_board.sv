@@ -2,22 +2,20 @@
 //
 //  m52_board - Irem M52 board set (Moon Patrol; Alpha One = the same board, variant 1)
 //  Copyright (C) 2026 Rodimus
+//  Based on MAME irem/m52.cpp (BSD-3-Clause; Nicola Salmoria) and the Williams drawing set 16-3007-103
+//  (CPU M52-A-C, character M52-B-C, scrolling video M52-E-C).
 //
-//  Williams drawing set 16-3007-103 (CPU M52-A-C, character M52-B-C, scrolling video M52-E-C; facts in
-//  Claude/irem1_schematic_facts.md) + MAME irem/m52.cpp. The board drives the dispatcher's pools through ports:
-//  main Z80 (z80pa), packed ROM store (CPU via the port-A arbiter, video on port B, PROMs on rom1), RAM pool.
+//  Drives the dispatcher's pools through ports: main Z80 (z80pa), packed ROM store (CPU via the port-A arbiter,
+//  video on port B, PROMs on rom1), RAM pool.
 //
-//  Raster (MAME coordinates): 384 x 282 at 6.144 MHz, 8 clocks of 49.152 MHz per pixel. Visible x 136-375;
-//  visible y 18-273 = 256 lines (user 2026-10-24: "more lines = better"; MAME shows 22-273, the drawing's VBLANK
-//  start 504 = y 274 kept); Alpha One 16-271 (MAME). Z80 at 3.072 MHz, IRQ0 at VBLANK start, held until acknowledged.
-//  Layers (MAME screen_update order): backdrop = sprite pen 0, mountains (bg0, pos 1), hills (bg1) or city (bg2) on
-//  pos 0, text layer (rows 0-6 opaque), sprites on top.
-//  Pixel pipeline: the pixel for raster (h, v) is fetched in the 8 clocks of h, its colour read at the start of h + 1
-//  and output during h + 2; blank and sync are delayed by the same two pixels.
-//  Flip (game flip XOR CRT Flip): every layer is computed at the mirrored game position (x -> 511 - x,
-//  y -> top + bottom - y, the centre of the visible window), so the picture turns 180 degrees with no per-layer rules.
-//  Not modelled: the scrolling board's Z80 /WAIT (drawing D-9456: every 8000-87FF access waits 1-2 periods of a
-//  video clock; MAME does not model it either).
+//  Raster: 384 x 282 at 6.144 MHz (8 clocks of 49.152 MHz per pixel). Visible x 136-375, y 18-273 (Alpha One 16-271).
+//  Z80 at 3.072 MHz, IRQ0 at VBLANK start, held until acknowledged.
+//  Layers: backdrop = sprite pen 0, mountains (bg0, pos 1), hills (bg1) or city (bg2) on pos 0, text layer
+//  (rows 0-6 opaque), sprites on top.
+//  Pixel pipeline: pixel (h, v) is fetched in the 8 clocks of h, its colour read at the start of h + 1 and output
+//  during h + 2; blank and sync are delayed by the same two pixels.
+//  Flip (game flip XOR CRT Flip): every layer is computed at the mirrored game position, so the picture turns 180 degrees.
+//  Not modelled: the scrolling board's Z80 /WAIT (drawing D-9456).
 //
 //============================================================================
 
@@ -106,7 +104,6 @@ always_ff @(posedge clk) begin
     end
 end
 
-// visible lines: M52 18-273 (MAME 22-273 + 4), Alpha One 16-271 (MAME alpha1v set_raw, VBLANK and IRQ at 272)
 wire [8:0] vtop = alpha1v ? 9'd16  : 9'd18;
 wire [8:0] vbot = alpha1v ? 9'd271 : 9'd273;
 wire hblank_raw = hcnt < 9'd136 || hcnt >= 9'd376;
@@ -179,7 +176,7 @@ assign snd_wr  = mem_wstb && sel_io && a[1:0] == 2'd0;                         /
 assign snd_cmd = cpu_o.dout;
 wire [2:0] pop7 = 3'(bgxpos0[0]) + 3'(bgxpos0[1]) + 3'(bgxpos0[2]) + 3'(bgxpos0[3]) + 3'(bgxpos0[4]) +
                   3'(bgxpos0[5]) + 3'(bgxpos0[6]);
-wire [7:0] prot = {5'd0, pop7 ^ {2'b00, bgxpos0[7]}};         // MAME protection_r: popcount(x & 7F) ^ (x >> 7)
+wire [7:0] prot = {5'd0, pop7 ^ {2'b00, bgxpos0[7]}};         // protection read: popcount(x & 7F) ^ (x >> 7)
 
 // RAM ports A: CPU, or the hiscore engine while paused (same address map)
 wire [15:0] ra = pause ? hs_address : a;
@@ -210,7 +207,7 @@ always_comb begin
     else if (sel_prot) cpu_di = prot;
     else if (sel_io)   cpu_di = io_q;
     else if (sel_wram) cpu_di = wram_q;
-    else               cpu_di = alpha1v ? 8'h00 : 8'hFF;    // Alpha One reads 7107 at boot and needs MAME's unmapped 00
+    else               cpu_di = alpha1v ? 8'h00 : 8'hFF;    // Alpha One reads 7107 at boot and needs 00 here
 end
 
 // per-field assigns: Quartus 17 rejects assignment patterns with non-constant members (error 10734)
@@ -282,14 +279,14 @@ end
 // pens (valid in ph7)
 wire [2:0] txb  = 3'd7 - tx[2:0];
 wire [1:0] t_pen = {t_msb[txb], t_lsb[txb]};
-wire       t_opq = t_pen != 2'd0 || ty < 8'd56;                              // rows 0-6 opaque (MAME FORCE_LAYER0)
-// image 256 x 128, 64 bytes per row; rows past the loaded ROM read FF (MAME ROMREGION_ERASEFF) = pen 3
+wire       t_opq = t_pen != 2'd0 || ty < 8'd56;                              // rows 0-6 opaque
+// image 256 x 128, 64 bytes per row; rows past the loaded ROM read FF = pen 3
 // (Moon Patrol: one 4K ROM = rows 0-63; Alpha One: two = rows 0-127; Alpha One's bg2 region is empty)
 function automatic [1:0] bg_pen(input [7:0] byte_, input [1:0] x, input [9:0] y, input [16:0] len, input fill);
     if (y[9])                 bg_pen = 2'd0;                                  // above the image
     else if (y < 10'd128)     bg_pen = ({4'd0, y[6:0], 6'd0} < len) ? {byte_[3'd3 - {1'b0, x}], byte_[3'd7 - {1'b0, x}]}
                                                                     : 2'd3;
-    else if (y < 10'd256)     bg_pen = fill ? 2'd3 : 2'd0;                    // MAME's solid fill below the image
+    else if (y < 10'd256)     bg_pen = fill ? 2'd3 : 2'd0;                    // solid fill below the image
     else                      bg_pen = 2'd0;
 endfunction
 wire [1:0] b0_pen  = bgctrl[5] || bgctrl[4] ? 2'd0 : bg_pen(b0_byte, b0x[1:0], b0y, bg0_len, ~alpha1v);
@@ -308,7 +305,7 @@ always_comb begin
     else                      begin pal_a = SP_PAL + {8'd0, clut0};                          pal_spr = 1'b1; end
 end
 
-// resistor DACs (MAME compute_resistor_weights, values match the drawing): text / backgrounds 1K-470-220,
+// resistor DACs (values match the drawing): text / backgrounds 1K-470-220,
 // blue 470-220; sprites 2-bit red 470-220, 3-bit green / blue 1K-470-220, all with the 470 ohm trimmers
 function automatic [7:0] w3(input [2:0] v);
     case (v) 3'd0: w3 = 8'd0; 3'd1: w3 = 8'd33; 3'd2: w3 = 8'd71; 3'd3: w3 = 8'd104;
@@ -342,8 +339,8 @@ end
 
 /////////////////////////////  Sprite engine (one line ahead)  /////////////////////////////
 
-// MAME draw order (later = on top): groups 0x00-0x3F, 0x40-0x7F, ..., each from offset 0x3C down to 0x00.
-// Sprite: [0] 257 - y, [1] flipy / flipx / colour (6 bits, MAME uses colour % 16), [2] code, [3] x (+129).
+// Draw order (later = on top): groups 0x00-0x3F, 0x40-0x7F, ..., each from offset 0x3C down to 0x00.
+// Sprite: [0] 257 - y, [1] flipy / flipx / colour (6 bits, low 4 used), [2] code, [3] x (+129).
 // 16 x 16, 3 planes (0x2000 = pen bit 2, 0x0000 = bit 1, 0x1000 = bit 0; Moon Patrol has no 0x2000 ROM);
 // lookup PROM {colour[3:0], pen}; lookup value 0 = transparent. Line buffer holds the lookup value (0 = empty).
 typedef enum logic [2:0] {S_IDLE, S_CLUT0, S_ATTR, S_CHECK, S_FETCH, S_DRAW, S_NEXT} sstate_t;

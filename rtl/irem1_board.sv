@@ -1,27 +1,24 @@
 //============================================================================
 //
-//  Irem1 — board top (dispatcher)
+//  Irem1 - board top (dispatcher)
 //  Copyright (C) 2026 Rodimus
+//  Based on MAME irem/m52.cpp, m57.cpp, m58.cpp, travrusa.cpp (BSD-3-Clause; Nicola Salmoria,
+//  Phil Stroffolino, Lee Taylor)
 //
-//  Pools (CPUs, sound chips, ROM store, RAM) live here; boards in rtl/boards/ drive them through ports, selected by
-//  variant (Projects/Arcade-Konami82_MiSTer/Claude/chip_pool_convention.md). Boards so far: M52 (variants 0-1,
-//  rtl/boards/m52_board.sv) and the shared Irem sound board (rtl/boards/irem_sound.sv). Other variants: idle.
-//
-//  Planned variants (index 1 byte 0; numbering is tools/gen_mra.py SUPPORTED):
-//    0  M52 board        (MAME irem/m52.cpp: mpatrol, mpatrolw, mranger)          M52-SOUND-C sound board
-//    1  M52 board, Alpha One mod (m52.cpp alpha1v)                                M52-SOUND-C
-//    2  M57 board        (irem/m57.cpp: troangel, newtangl)                       M52-SOUND-C (MAME "SOUNDC")
-//    3  M58 board        (irem/m58.cpp: 10yard, 10yardj, vs10yard*, 10yard85)    M52 "large" sound map, 2x MSM5205
-//    4  Traverse USA     (irem/travrusa.cpp: travrusa, travrusab*, mototour, motorace)  M52-SOUND-C
-//    5  Shot Rider       (travrusa.cpp shtrider, shtridera: own sprite layout / palette)  M52-SOUND-C
-//    6  Shot Rider bootleg (travrusa.cpp shtriderb: + I/O port 0x11 read)              M52-SOUND-C
-//  CPU ROM decode (index 1 byte 2, decoded on read): 1 = motorace (init_motorace address + data bitswap),
-//  2 = shtridera (init_shtridra data bitswap).
-//  Every board: Z80 main at 18.432 MHz / 6, 6.144 MHz pixel clock, 384 x 282 raster; one shared sound board
+//  CPU, sound chip, ROM and RAM pools live here; boards in rtl/boards/ drive them through ports,
+//  selected by variant (index 1 byte 0, numbering = tools/gen_mra.py SUPPORTED):
+//    0  M52 board         mpatrol, mpatrolw, mranger                       M52-SOUND-C
+//    1  M52, Alpha One mod (alpha1v)                                       M52-SOUND-C
+//    2  M57 board         troangel, newtangl                               M52-SOUND-C
+//    3  M58 board         10yard, 10yardj, vs10yard*, 10yard85             large sound map, 2x MSM5205
+//    4  Traverse USA      travrusa, travrusab*, mototour, motorace         M52-SOUND-C
+//    5  Shot Rider        shtrider, shtridera (own sprite layout / palette) M52-SOUND-C
+//    6  Shot Rider bootleg shtriderb (+ I/O port 0x11 read)                M52-SOUND-C
+//  CPU ROM decode (index 1 byte 2, on read): 1 = motorace (address + data bitswap), 2 = shtridera (data bitswap).
+//  Every board: Z80 at 18.432 MHz / 6, 6.144 MHz pixel clock, 384 x 282 raster; one shared sound board
 //  (M6803 at 3.579545 MHz, 2x AY-3-8910 at 3.579545 / 4, MSM5205 at 384 kHz).
 //
-//  Clock: 49.152 MHz = 8 x 6.144 MHz (pixel / Z80 clock enables exact); the 3.579545 MHz sound clock is a fractional
-//  enable (jtframe_frac_cen pattern, HDL/jt49 AY-3-8910 wiring in the vault).
+//  Clock: 49.152 MHz = 8 x 6.144 MHz; the 3.579545 MHz sound clock is a fractional enable.
 //
 //============================================================================
 
@@ -67,12 +64,9 @@ module irem1_board
     input  logic        hs_write
 );
 
-// boards and the sound board: end of this file (after the pools they connect to)
-
 /////////////////////////////  Shared CPU / sound chip pool  /////////////////////////////
 
-// Main Z80 (T80pa: the M52 CPU board takes /WAIT from the scrolling video board, schematic D-9454 / D-9456 CN2-10A):
-// z80pa_0: every board's main CPU (M52, M57, M58, Traverse USA)
+// Main Z80 (T80pa; /WAIT comes from the scrolling video board, schematic D-9454 / D-9456 CN2-10A)
 chip_pool_pkg::z80pa_i_t z80pa_0_i;
 chip_pool_pkg::z80pa_o_t z80pa_0_o;
 
@@ -93,36 +87,7 @@ assign z80pa_0_o.a = z80pa_0_a;           assign z80pa_0_o.dout = z80pa_0_do;
 assign z80pa_0_o.m1_n = z80pa_0_m1_n;     assign z80pa_0_o.mreq_n = z80pa_0_mreq_n; assign z80pa_0_o.iorq_n = z80pa_0_iorq_n;
 assign z80pa_0_o.rd_n = z80pa_0_rd_n;     assign z80pa_0_o.wr_n = z80pa_0_wr_n;     assign z80pa_0_o.rfsh_n = z80pa_0_rfsh_n;
 
-// M6803-2026-10-25: jtframe_6801mcu pool replaced by our rtl/cpu/m6803.sv (external-ROM boards). Original:
-// // Sound M6803 (jtframe_6801mcu + jt680x, Jose Tejada, unmodified): m6801_0: the Irem sound board, every variant.
-// // TODO(board): the 6803 runs on external ROM (small map 0x2000-0x7FFF mirrored, large map 0x4000-0xFFFF); the
-// // wrapper's internal-ROM port (ROMW / rom_cs) and MODE handling must be checked against that before use.
-// chip_pool_pkg::m6801_i_t m6801_0_i;
-// chip_pool_pkg::m6801_o_t m6801_0_o;
-// assign m6801_0_i = '{cen: 1'b0, cen_tmr: 1'b0, irq: 1'b0, nmi: 1'b0, xdin: 8'hFF, p1_din: 8'hFF, p2_din: 5'h1F,
-//                      p3_din: 8'hFF, p4_din: 8'hFF, rom_data: 8'hFF};
-//
-// wire [15:0] m6801_0_addr;
-// wire  [7:0] m6801_0_dout, m6801_0_p1, m6801_0_p3, m6801_0_p4;
-// wire  [4:0] m6801_0_p2;
-// wire        m6801_0_wr, m6801_0_xcs, m6801_0_romcs;
-//
-// jtframe_6801mcu m6801_0
-// (
-//     .rst(reset), .clk(clk), .cen(m6801_0_i.cen), .cen_tmr(m6801_0_i.cen_tmr), .irq(m6801_0_i.irq), .nmi(m6801_0_i.nmi),
-//     .addr(m6801_0_addr), .xdin(m6801_0_i.xdin), .dout(m6801_0_dout), .wr(m6801_0_wr), .x_cs(m6801_0_xcs), .ba(),
-//     .p1_din(m6801_0_i.p1_din), .p3_din(m6801_0_i.p3_din), .p4_din(m6801_0_i.p4_din),
-//     .p1_dout(m6801_0_p1), .p3_dout(m6801_0_p3), .p4_dout(m6801_0_p4),
-//     .p2_din(m6801_0_i.p2_din), .p2_dout(m6801_0_p2),
-//     .rom_addr(), .rom_data(m6801_0_i.rom_data), .rom_cs(m6801_0_romcs)
-// );
-//
-// assign m6801_0_o.addr = m6801_0_addr;     assign m6801_0_o.dout = m6801_0_dout;   assign m6801_0_o.wr = m6801_0_wr;
-// assign m6801_0_o.x_cs = m6801_0_xcs;      assign m6801_0_o.rom_cs = m6801_0_romcs;
-// assign m6801_0_o.p1_dout = m6801_0_p1;    assign m6801_0_o.p2_dout = m6801_0_p2;
-// assign m6801_0_o.p3_dout = m6801_0_p3;    assign m6801_0_o.p4_dout = m6801_0_p4;
-
-// Sound MC6803 (rtl/cpu/m6803.sv around jt680x, Jose Tejada): m6803_0: the Irem sound board, every variant
+// Sound MC6803 (rtl/cpu/m6803.sv around jt680x, Jose Tejada)
 chip_pool_pkg::m6803_i_t m6803_0_i;
 chip_pool_pkg::m6803_o_t m6803_0_o;
 
@@ -134,9 +99,8 @@ m6803 m6803_0
     .mode(m6803_0_i.mode)
 );
 
-// AY-3-8910 x 2 (jt49_bus, Jose Tejada): ay[0] = 45M (IOA = sound latch, IOB = MSM5205 control), ay[1] = 45L; every
-// variant. MAME: M52-SOUND-C / large map = AY8910_SINGLE_OUTPUT | DISCRETE_OUTPUT, 470 ohm load (schematic R2 470):
-// the boards map jt49 levels through that load curve (vault: AY channel levels need the board's output load curve).
+// AY-3-8910 x 2 (jt49_bus, Jose Tejada): ay[0] = 45M (IOA = sound latch, IOB = MSM5205 control), ay[1] = 45L
+// Output through the 470 ohm load (schematic R2 470); levels are mapped through that load curve in the boards.
 chip_pool_pkg::ay_i_t [1:0] ay_i;
 chip_pool_pkg::ay_o_t [1:0] ay_o;
 
@@ -156,8 +120,7 @@ generate
     end
 endgenerate
 
-// MSM-REVERT-2026-10-25: jt5205 pool replaced by our msm5205.sv again (user: the Moon Patrol rock "thonk" was
-// inaudible with jt5205). jt5205 block commented out below; MSM5205 x 2: [0] every variant, [1] M58 only.
+// MSM5205 x 2: [0] every variant, [1] M58 only.
 chip_pool_pkg::msm5205_i_t [1:0] msm5205_i;
 chip_pool_pkg::msm5205_o_t [1:0] msm5205_o;
 genvar mi;
@@ -171,27 +134,6 @@ generate
         assign msm5205_o[mi].signal = signal;
     end
 endgenerate
-
-// // MSM5205 x 2 (jt5205, Jose Tejada): msm5205[0] = every variant, msm5205[1] = M58 (10-Yard Fight) only,
-// // clocked by the first chip's VCK (MAME m52_large_audio_device). irq = VCK strobe -> the M6803 NMI.
-// chip_pool_pkg::jt5205_i_t [1:0] msm5205_i;
-// chip_pool_pkg::jt5205_o_t [1:0] msm5205_o;
-//
-// genvar mi;
-// generate
-//     for (mi = 0; mi < 2; mi = mi + 1) begin : g_msm5205
-//         wire signed [11:0] sound;
-//         wire irq, vclk;
-//         jt5205 msm
-//         (
-//             .rst(msm5205_i[mi].rst), .clk(clk), .cen(msm5205_i[mi].cen), .sel(msm5205_i[mi].sel), .din(msm5205_i[mi].din),
-//             .sound(sound), .sample(), .irq(irq), .vclk_o(vclk)
-//         );
-//         assign msm5205_o[mi].sound = sound;
-//         assign msm5205_o[mi].irq   = irq;
-//         assign msm5205_o[mi].vclk  = vclk;
-//     end
-// endgenerate
 
 /////////////////////////////  Shared ROM blocks  /////////////////////////////
 
@@ -234,7 +176,7 @@ dpram_dc #(.widthad_a(12)) rom1
 
 /////////////////////////////  Shared RAM pool  /////////////////////////////
 
-// Sized to the largest user (MAME memory maps): port A = CPU (or hiscore while paused), port B = video.
+// Port A = CPU (or hiscore while paused), port B = video.
 // wram   4K: main work RAM          (M52 / M57 E000-E7FF 2K; M58 / Traverse USA / alpha1v E000-EFFF 4K)
 // vram   4K: tile video + colour RAM (M52 8000-87FF; M57 8000-87FF; M58 / Traverse USA 8000-8FFF)
 // sram  512: sprite RAM             (M52 C800-C8FF (+alpha1v C9FF); M57 C820-C8FF; M58 C820-C87F; Traverse USA C800-C9FF)
@@ -248,41 +190,44 @@ logic  [7:0] wram_qa, wram_qb, vram_qa, vram_qb, xram_qa, xram_qb, sram_qa, sram
 logic        lb0_wb, lb1_wb;                     // line buffers: port B clears behind the display read
 assign wram_ab = '0;
 
-dpram_dc #(.widthad_a(12)) wram
-(
-    .clock_a(clk), .address_a(wram_aa), .data_a(wram_da), .wren_a(wram_wa), .q_a(wram_qa),
-    .clock_b(clk), .address_b(wram_ab), .data_b(8'd0), .wren_b(1'b0), .q_b(wram_qb)
-);
+// Blocks: 0 wram (4K), 1 vram (4K), 2 xram (4K), 3 sram (512), 4 lbuf0 (512), 5 lbuf1 (512).
 
-dpram_dc #(.widthad_a(12)) vram
-(
-    .clock_a(clk), .address_a(vram_aa), .data_a(vram_da), .wren_a(vram_wa), .q_a(vram_qa),
-    .clock_b(clk), .address_b(vram_ab), .data_b(8'd0), .wren_b(1'b0), .q_b(vram_qb)
-);
+localparam RAM_BLOCKS = 6;
+ram_pool_pkg::pram_i_t [RAM_BLOCKS-1:0] pool_i;
+ram_pool_pkg::pram_o_t [RAM_BLOCKS-1:0] pool_o;
 
-dpram_dc #(.widthad_a(12)) xram
-(
-    .clock_a(clk), .address_a(xram_aa), .data_a(xram_da), .wren_a(xram_wa), .q_a(xram_qa),
-    .clock_b(clk), .address_b(xram_ab), .data_b(8'd0), .wren_b(1'b0), .q_b(xram_qb)
-);
+assign pool_i[0].a_addr = {3'd0, wram_aa}; assign pool_i[0].a_d = wram_da; assign pool_i[0].a_we = wram_wa;
+assign pool_i[0].b_addr = {3'd0, wram_ab}; assign pool_i[0].b_d = 8'd0;    assign pool_i[0].b_we = 1'b0;
+assign pool_i[1].a_addr = {3'd0, vram_aa}; assign pool_i[1].a_d = vram_da; assign pool_i[1].a_we = vram_wa;
+assign pool_i[1].b_addr = {3'd0, vram_ab}; assign pool_i[1].b_d = 8'd0;    assign pool_i[1].b_we = 1'b0;
+assign pool_i[2].a_addr = {3'd0, xram_aa}; assign pool_i[2].a_d = xram_da; assign pool_i[2].a_we = xram_wa;
+assign pool_i[2].b_addr = {3'd0, xram_ab}; assign pool_i[2].b_d = 8'd0;    assign pool_i[2].b_we = 1'b0;
+assign pool_i[3].a_addr = {6'd0, sram_aa}; assign pool_i[3].a_d = sram_da; assign pool_i[3].a_we = sram_wa;
+assign pool_i[3].b_addr = {6'd0, sram_ab}; assign pool_i[3].b_d = 8'd0;    assign pool_i[3].b_we = 1'b0;
+assign pool_i[4].a_addr = {6'd0, lb0_aa};  assign pool_i[4].a_d = lb0_da;  assign pool_i[4].a_we = lb0_wa;
+assign pool_i[4].b_addr = {6'd0, lb0_ab};  assign pool_i[4].b_d = 8'd0;    assign pool_i[4].b_we = lb0_wb;
+assign pool_i[5].a_addr = {6'd0, lb1_aa};  assign pool_i[5].a_d = lb1_da;  assign pool_i[5].a_we = lb1_wa;
+assign pool_i[5].b_addr = {6'd0, lb1_ab};  assign pool_i[5].b_d = 8'd0;    assign pool_i[5].b_we = lb1_wb;
+assign {wram_qa, wram_qb} = {pool_o[0].a_q, pool_o[0].b_q};
+assign {vram_qa, vram_qb} = {pool_o[1].a_q, pool_o[1].b_q};
+assign {xram_qa, xram_qb} = {pool_o[2].a_q, pool_o[2].b_q};
+assign {sram_qa, sram_qb} = {pool_o[3].a_q, pool_o[3].b_q};
+assign {lb0_qa, lb0_qb}   = {pool_o[4].a_q, pool_o[4].b_q};
+assign {lb1_qa, lb1_qb}   = {pool_o[5].a_q, pool_o[5].b_q};
 
-dpram_dc #(.widthad_a(9)) sram
-(
-    .clock_a(clk), .address_a(sram_aa), .data_a(sram_da), .wren_a(sram_wa), .q_a(sram_qa),
-    .clock_b(clk), .address_b(sram_ab), .data_b(8'd0), .wren_b(1'b0), .q_b(sram_qb)
-);
-
-dpram_dc #(.widthad_a(9)) lbuf0
-(
-    .clock_a(clk), .address_a(lb0_aa), .data_a(lb0_da), .wren_a(lb0_wa), .q_a(lb0_qa),
-    .clock_b(clk), .address_b(lb0_ab), .data_b(8'd0), .wren_b(lb0_wb), .q_b(lb0_qb)
-);
-
-dpram_dc #(.widthad_a(9)) lbuf1
-(
-    .clock_a(clk), .address_a(lb1_aa), .data_a(lb1_da), .wren_a(lb1_wa), .q_a(lb1_qa),
-    .clock_b(clk), .address_b(lb1_ab), .data_b(8'd0), .wren_b(lb1_wb), .q_b(lb1_qb)
-);
+genvar rp;
+generate
+    for (rp = 0; rp < RAM_BLOCKS; rp++) begin : rpool
+        localparam AW = (rp < 3) ? 12 : 9;       // blocks 0-2 4K, 3-5 512
+        dpram_dc #(.widthad_a(AW)) ram
+        (
+            .clock_a(clk), .address_a(pool_i[rp].a_addr[AW-1:0]), .data_a(pool_i[rp].a_d), .wren_a(pool_i[rp].a_we),
+            .q_a(pool_o[rp].a_q),
+            .clock_b(clk), .address_b(pool_i[rp].b_addr[AW-1:0]), .data_b(pool_i[rp].b_d), .wren_b(pool_i[rp].b_we),
+            .q_b(pool_o[rp].b_q)
+        );
+    end
+endgenerate
 
 /////////////////////////////  Boards  /////////////////////////////
 
@@ -414,10 +359,7 @@ assign ce_pix = bd_ce_pix[bs];
 assign {video_r, video_g, video_b} = {bd_r[bs], bd_g[bs], bd_b[bs]};
 assign {video_hs, video_vs, video_hblank, video_vblank} = {bd_hs[bs], bd_vs[bs], bd_hbl[bs], bd_vbl[bs]};
 
-// Irem sound board (every variant; M58 = large map). MSM5205 control map = MAME's: Moon Patrol writes 3J port B = 0x13
-// once; MAME's map gives a 4 kHz VCK / NMI, the drawing's IOB1 = S1 reading gives 8 kHz, and the sim's music tracks
-// MAME only with 4 kHz (envelope correlation 0.86 vs 0.41, sim 2026-10-25). The drawing's S1 / S2 / 4B ground pads,
-// if fitted, also give 4 kHz. Either way the MSM5205 is held in reset (bit 0) in Moon Patrol.
+// MSM5205 control uses the MAME map (4 kHz VCK / NMI) rather than the drawing's 8 kHz; do not change it.
 irem_sound sound
 (
     .clk(clk), .reset(reset), .pause(pause), .large_map(variant == 8'd3), .msm_mame_map(1'b1), .rom_rgn(rom_rgn),

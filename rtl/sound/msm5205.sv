@@ -2,11 +2,12 @@
 //
 //  OKI MSM5205 ADPCM decoder
 //  Copyright (C) 2026 Rodimus
+//  Based on MAME msm5205.cpp (BSD-3-Clause, Aaron Giles)
 //
-//  From MAME msm5205.cpp: 12-bit internal signal, 10-bit DAC, 49-step table
-//  floor(16 * 1.1^step), index shift {-1,-1,-1,-1,2,4,6,8}. One nibble per
-//  'step' pulse (the VCK edge at which MAME's update_adpcm runs); 'rst' is the
-//  chip's RESET input as seen at that edge (signal and step cleared).
+//  12-bit signal, 10-bit DAC output. One nibble per 'step' pulse (the VCK edge); 'rst' is the
+//  chip RESET input sampled at that edge (clears signal and step).
+//
+//============================================================================
 //
 //============================================================================
 

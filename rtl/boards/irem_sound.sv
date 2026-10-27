@@ -2,28 +2,27 @@
 //
 //  irem_sound - Irem M52-SOUND-C sound board (every Irem1 variant; M58 uses its "large" map)
 //  Copyright (C) 2026 Rodimus
+//  Based on MAME irem/irem.cpp (BSD-3-Clause; smf, David Haywood) and drawing C-9457 (Moon Patrol drawing set).
 //
-//  Drawing C-9457 (Moon Patrol drawing set, Useful Information/schematics, page 11) + MAME irem/irem.cpp.
-//  6803 at 3.579545 MHz (pool m6803), E clocks both AY-3-8910s (pool ay[0] = 3J / MAME 45M, ay[1] = 3F / 45L),
-//  MSM5205 at 384 kHz (pool msm5205[0], our msm5205.sv; [1] = M58's second chip, not wired yet).
+//  6803 at 3.579545 MHz (pool m6803), E clocks both AY-3-8910s (pool ay[0] = 3J, ay[1] = 3F),
+//  MSM5205 at 384 kHz (pool msm5205[0]; [1] = M58's second chip).
 //    Port 1 = AY data bus. Port 2: bit 0 falling edge = AY strobe, bit 2 = address (1) / data (0), bit 3 = 3J,
 //    bit 4 = 3F; port 1 reads the selected AY. 3J port A = sound command latch, 3J port B = MSM5205 control.
 //    Small map (A15 ignored): 0x0000-0x0FFF MSM5205 data (A0 = chip 1, A1 = chip 2), 0x1000-0x1FFF IRQ ack,
 //    0x2000-0x7FFF ROM. Large map: 0x0000-0x1FFF MSM data, 0x2000-0x3FFF ack, 0x4000-0xFFFF ROM.
-//    IRQ (MAME cmd_w): set by a command with bit 7 clear (and at reset), cleared by an ack while bit 7 is set.
+//    IRQ: set by a command with bit 7 clear (and at reset), cleared by an ack while bit 7 is set.
 //    NMI = MSM5205 VCK through the TR1 inverter (6803 NMI is edge triggered).
 //  MSM5205 control from 3J port B. Drawing: IOB0 = RES, IOB1 = S1, IOB2 = S2, IOB3 = 4B/3B, each with a 4.7K
-//  pull-up (so the pins read high while the AY port is an input). MAME's map (bit 0 / 1 = reset chip 1 / 2,
-//  bits 2-4 = playmode) is one bit higher; msm_mame_map selects it (open: which one the Moon Patrol code expects).
+//  pull-up (pins read high while the AY port is an input).
 //
-//  Mixer, from the drawing except R15 (MAME m52_sound_c_discrete differs: C32 0.022 uF, Sallen-Key bypassed):
+//  Mixer (drawing; R15 = 2.2K as on the SOUND-G drawing, the Moon Patrol drawing shows 22K):
 //    all six AY outputs share one 470 ohm load (R2) -> R25 10K -> summing node;
 //    MSM DA OUT -> R19 10K -> C37 0.1u -> R22 47K (+5) / R23 2.2K -> 3M follower -> R12 10K / C30 0.022u ->
-//    Sallen-Key low-pass (R13 = R14 = 10K, C32 0.027u feedback, C36 0.0068u) -> R15 2.2K (drawing: 22K) -> summing node;
+//    Sallen-Key low-pass (R13 = R14 = 10K, C32 0.027u feedback, C36 0.0068u) -> R15 2.2K -> summing node;
 //    summing node -> VR1 50K -> C28 1u -> R9 560 / R10 330 -> M51516 amp (high-pass ~18 Hz at a mid volume setting).
-//    AY node voltage = MAME's AY8910 output model (ay8910_param r_up / r_down / res[]) with all six channels on
-//    the one 470 ohm load, solved with a divider at 768 kHz and averaged to 192 kHz. The filter chain runs at
-//    192 kHz (forward Euler, one time-shared 27 x 18 multiplier).
+//    AY node voltage follows the AY8910 output model (r_up / r_down / res[]) with all six channels on the one
+//    470 ohm load, solved with a divider at 768 kHz and averaged to 192 kHz. The filter chain runs at 192 kHz
+//    (forward Euler, one time-shared 27 x 18 multiplier).
 //
 //============================================================================
 
@@ -47,9 +46,6 @@ module irem_sound
 
     output chip_pool_pkg::ay_i_t     [1:0] ay_i,
     input  chip_pool_pkg::ay_o_t     [1:0] ay_o,
-    // MSM-REVERT-2026-10-25: pool back on our msm5205.sv; jt5205 ports were:
-    // output chip_pool_pkg::jt5205_i_t [1:0] msm_i,
-    // input  chip_pool_pkg::jt5205_o_t [1:0] msm_o,
     output chip_pool_pkg::msm5205_i_t [1:0] msm_i,
     input  chip_pool_pkg::msm5205_o_t [1:0] msm_o,
 
@@ -100,7 +96,7 @@ logic [3:0] msm_d0 = 4'd0, msm_d1 = 4'd0;
 always_ff @(posedge clk) begin
     if (reset) begin
         latch <= 8'd0;
-        irq   <= 1'b1;                                      // MAME device_reset asserts the IRQ
+        irq   <= 1'b1;                                      // IRQ asserted at reset
         msm_d0 <= 4'd0;  msm_d1 <= 4'd0;
     end else begin
         if (cmd_wr) begin
@@ -119,7 +115,6 @@ end
 logic [5:0] nmi_cnt = 6'd0;
 logic       msm_step = 1'b0;                          // MSM5205 VCK strobe (made in the MSM5205 control section)
 always_ff @(posedge clk)
-    // MSM-REVERT-2026-10-25: was  if (msm_o[0].irq) nmi_cnt <= 6'd63;   (jt5205 VCK strobe)
     if (msm_step) nmi_cnt <= 6'd63;
     else if (nmi_cnt != 6'd0) nmi_cnt <= nmi_cnt - 6'd1;
 
@@ -136,7 +131,7 @@ always_ff @(posedge clk) begin
     p2_d <= p2;
     ay_addr_stb <= 1'b0;
     ay_data_stb <= 1'b0;
-    if (p2_d[0] && !p2[0]) begin                            // MAME m6803_port2_w: uses the previous port 2 value
+    if (p2_d[0] && !p2[0]) begin                            // uses the previous port 2 value
         ay_sel_stb  <= p2_d[4:3];
         ay_addr_stb <= p2_d[2];
         ay_data_stb <= ~p2_d[2];
@@ -175,22 +170,14 @@ assign cpu_i.mode  = 3'd0;
 /////////////////////////////  MSM5205 control (3J port B)  /////////////////////////////
 
 wire [7:0] iob = iob_out_en[0] ? ay_o[0].iob_out : 8'hFF;   // 4.7K pull-ups while the port is an input
-// MAME playmode index: 0 = /96, 1 = /48, 2 = /64, 3 = slave; jt5205 sel: 0 = /96, 1 = /64, 2 = /48, 3 = slave
-function automatic [1:0] jt_sel(input [1:0] idx);
-    jt_sel = {idx[0], idx[1]};
-endfunction
+// playmode index: 0 = /96, 1 = /48, 2 = /64, 3 = slave
 wire [1:0] idx0 = msm_mame_map ? iob[3:2] : iob[2:1];
 wire       b4_0 = msm_mame_map ? iob[4]   : iob[3];
 wire       rst0 = iob[0];
 wire       rst1 = msm_mame_map ? iob[1] : 1'b1;
 
-// MSM-REVERT-2026-10-25: VCK made here for our msm5205.sv (no prescaler of its own): 384 kHz / 96, 48, 64 by the
-// MAME playmode index (3 = slave: no VCK); one nibble decoded and one 6803 NMI per VCK, as MAME update_adpcm.
-// jt5205 wiring was:
-// assign msm_i[0].rst = rst0 | reset;
-// assign msm_i[0].cen = cen_msm;
-// assign msm_i[0].sel = jt_sel(idx0);
-// assign msm_i[0].din = b4_0 ? msm_d0 : {msm_d0[2:0], 1'b0};
+// VCK made here (msm5205.sv has no prescaler): 384 kHz / 96, 48, 64 by the playmode index (3 = slave: no VCK);
+// one nibble decoded and one 6803 NMI per VCK.
 logic [6:0] vck_cnt = 7'd0;
 wire  [6:0] vck_div = (idx0 == 2'd0) ? 7'd95 : (idx0 == 2'd1) ? 7'd47 : 7'd63;
 always_ff @(posedge clk) begin
@@ -204,10 +191,8 @@ end
 assign msm_i[0].step = msm_step;
 assign msm_i[0].rst  = rst0 | reset;
 assign msm_i[0].data = b4_0 ? msm_d0 : {msm_d0[2:0], 1'b0};
-// TODO(M58): second MSM5205 in slave mode, clocked by the first one's VCK
-// MSM-REVERT-2026-10-25: was (jt5205) rst 1, cen 0, sel 3, din msm_d1
-// Second MSM5205 = M52-SOUND-G (M58) only: slave, decodes on the master's VCK (MAME playmode ((b >> 2) & 4) | 3:
-// 4-bit mode from bit 4, prescaler = slave), reset = 3J port B bit 1. Held in reset on the small board.
+// Second MSM5205 = M52-SOUND-G (M58) only: slave, decodes on the master's VCK:
+// 4-bit mode from bit 4, prescaler = slave, reset = 3J port B bit 1. Held in reset on the small board.
 wire b4_1 = iob[4];
 assign msm_i[1].step = msm_step & large_map;
 assign msm_i[1].rst  = rst1 | reset | ~large_map;
@@ -221,7 +206,7 @@ function automatic [3:0] ay_step(input [7:0] lin);
               4'(lin >= 8'd9)  + 4'(lin >= 8'd13) + 4'(lin >= 8'd18) + 4'(lin >= 8'd26)  + 4'(lin >= 8'd37)  +
               4'(lin >= 8'd53) + 4'(lin >= 8'd75) + 4'(lin >= 8'd107) + 4'(lin >= 8'd151) + 4'(lin >= 8'd214);
 endfunction
-// conductance of one output at each step, units of 1e-7 S: 1 / res[step] + (step ? 1 / r_up : 0) (MAME ay8910_param)
+// conductance of one output at each step, units of 1e-7 S: 1 / res[step] + (step ? 1 / r_up : 0)
 function automatic [12:0] ay_g(input [3:0] s);
     case (s)
         4'd0:  ay_g = 13'd627;   4'd1:  ay_g = 13'd664;   4'd2:  ay_g = 13'd676;   4'd3:  ay_g = 13'd691;
@@ -261,14 +246,10 @@ always_ff @(posedge clk) begin
 end
 
 // 192 kHz filter chain, states Q.24 (1.0 = Vcc), coefficients Q0.18 (python, from the drawing values).
-// GAIN: loudest Moon Patrol passage (rock shooting, sim) peaks ~27700 = -1.5 dBFS. 1600 (= MAME's loudness) was too
-// quiet on HW: the rock "thump" got lost (user 2026-10-25); offline mixer models showed the thump content = MAME's.
+// GAIN: loudest Moon Patrol passage peaks ~27700 = -1.5 dBFS.
 localparam [17:0] K1 = 18'd1128, KDIV = 18'd45525, K2 = 18'd6206, K3 = 18'd5057, K4 = 18'd20078,
                   WAY = 18'd45626, WMSM = 18'd207392, K5 = 18'd153, GAIN = 18'd10070;
-// R15-2026-10-25: R15 = 2.2K (MAME M52_R15, the 10-Yard SOUND-G drawing, MAME's Tropical Angel PCB photos), not the
-// Williams Moon Patrol drawing's 22K: with 22K the rock "thonk" (MSM5205 released, ADPCM noise burst at a rock hit;
-// MAME NMI-rate log 2026-10-25) was inaudible on HW. GAIN raised to keep the AY level of the 22K build. 22K values:
-//                WAY = 18'd158439, WMSM = 18'd72018, K5 = 18'd153, GAIN = 18'd2900;
+// R15 = 2.2K (SOUND-G drawing), not the Moon Patrol drawing's 22K.
 logic signed [31:0] x, lp1, hp, y2, u, vb, mix, lp5;
 logic signed [26:0] ma;
 logic        [17:0] mb;
@@ -290,7 +271,6 @@ always_ff @(posedge clk) begin
     end else begin
         if (tick) begin
             st <= 6'd0;
-            // MSM-REVERT-2026-10-25: was  x <= 32'($signed(msm_o[0].sound)) <<< 12;   (jt5205)
             // M52-SOUND-G: both DA outputs into one node through R20 / R29 (10K each) = their average
             x  <= large_map ? (32'($signed(msm_o[0].signal)) + 32'($signed(msm_o[1].signal))) <<< 11
                             : 32'($signed(msm_o[0].signal)) <<< 12;            // +-2048 -> +-0.5 Vcc
