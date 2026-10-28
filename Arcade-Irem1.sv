@@ -4,7 +4,7 @@
 //  Copyright (C) 2026 Rodimus
 //
 //  Top level carried over from the Rodimus Konami82 core (Pac-Man core lineage, MikeJ / Sorgelig).
-//  Boards: M52, M57, M58, Traverse USA + the Irem sound board (rtl/irem1_board.sv dispatcher).
+//  Boards: M52, M57, M58, Traverse USA + the Irem sound board (rtl/irem1_dispatcher.sv dispatcher).
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a
 //  copy of this software and associated documentation files (the "Software"),
@@ -82,14 +82,14 @@ assign BUTTONS = 0;
 ///////////////////////////////////////////////////
 
 // MRA index 1:
-//   byte 0      board variant (see rtl/irem1_board.sv)
+//   byte 0      board variant (see rtl/irem1_dispatcher.sv)
 //   byte 1      flags: [0] 4-way joystick, [2] coins are 2-frame pulses, [4] vertical, [7] vertical is ROT90
-//   byte 2      CPU ROM decode (see rtl/irem1_board.sv)
-//   byte 3      board flags (see rtl/irem1_board.sv)
+//   byte 2      CPU ROM decode (see rtl/irem1_dispatcher.sv)
+//   byte 3      board flags (see rtl/irem1_dispatcher.sv)
 //   bytes 4-9   idle level of every bit of the 6 ports (board order)
 //   bytes 10-15 per port: DIP switch byte that supplies it (bit 7 set = none, use the idle byte)
 //   bytes 16-63 input map, one byte per port bit (bit 0 first): control id, 0 = none; a pressed control inverts its bit
-//   bytes 64-111 ROM region table, 8 slots x {base, start, len} (u16 LE, 256-byte units; rtl/irem1_board.sv,
+//   bytes 64-111 ROM region table, 8 slots x {base, start, len} (u16 LE, 256-byte units; rtl/irem1_dispatcher.sv,
 //               Shared ROM blocks), written by tools/gen_mra.py from each set's ROM layout
 // Only DIP ports go in the MRA switch bytes: Main_MiSTer builds the default as int shifts, so a byte >= 0x80 at
 // position 3 sign-extends over bytes 4-7, and bytes 4+ are shifted by 32+ (mra_loader.cpp: binary[i] << (i * 8))
@@ -420,7 +420,7 @@ arcade_video #(256,24) arcade_video
 
 // Flip: CRT Flip (status[22]) turns the board's own raster 180 degrees on every board (HDMI follows it; HDMI Flip
 // on top, as in Konami82); the board's game flip stays separate inside each board.
-irem1_board board
+irem1_dispatcher board
 (
 	.clk(CLK_SYS),
 	.reset(reset),

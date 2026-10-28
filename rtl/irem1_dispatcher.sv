@@ -22,7 +22,7 @@
 //
 //============================================================================
 
-module irem1_board
+module irem1_dispatcher
 (
     input  logic        clk,            // 49.152 MHz
     input  logic        reset,

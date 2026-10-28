@@ -2,7 +2,7 @@
 //  board_template.sv - starting point for a new Irem1 board (NOT in files.qip, never compiled).
 //  Copyright (C) 2026 Rodimus
 //
-//  Boards instantiate no CPU, sound chip, ROM store or board RAM; those live once in rtl/irem1_board.sv
+//  Boards instantiate no CPU, sound chip, ROM store or board RAM; those live once in rtl/irem1_dispatcher.sv
 //  (main Z80, sound m6803 / AY x2 / MSM5205 x2 via irem_sound, ROM rom0 / rom1, RAM pool blocks 0-5 =
 //  wram / vram / xram / sram / lbuf0 / lbuf1). A board only drives the ports below.
 //  To add one: copy to rtl/boards/<board>_board.sv, add it to files.qip + verilator/Makefile, give it the next
