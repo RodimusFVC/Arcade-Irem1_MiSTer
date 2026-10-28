@@ -807,4 +807,122 @@ typedef struct packed {
     logic [15:0] audio;                 // signed
 } tms5220rsws_o_t;
 
+// (Universal)
+// MC6845 CRTC (rtl/video/mc6845.vhd, David Banks / Mike Stirling; no generics; CURSOR unused, LPSTB low). reset_n is on the bus:
+// each board holds the chip in reset while it is not the active one (Castle: reset | ~dcastle, TMS: reset | ~tms).
+// Castle writes only (r_nw 0, do unused); the TMS board reads registers back through do.
+typedef struct packed {
+    logic        reset_n;
+    logic        clken;
+    logic        enable;
+    logic        r_nw;
+    logic        rs;
+    logic  [7:0] di;
+} mc6845_i_t;
+
+typedef struct packed {
+    logic  [7:0] dout;
+    logic        vsync;
+    logic        hsync;
+    logic        vblank;
+    logic        hblank;
+    logic        de;
+    logic [13:0] ma;
+    logic  [4:0] ra;
+} mc6845_o_t;
+
+// (Universal)
+// TMS9900 / TMS9980A (Piehl's tms9900.vhd as edited in Universal: no scratchpad, in-file multiplier, byte_bus, ir_step2;
+// generic cycle_clks_g stays at its default 8; waits 0, scratch_en 0, turbo 0 and the debug outputs are constants /
+// unused). reset is the CPU pin (high), on the bus: the TMS board holds it with reset | ~tms.
+typedef struct packed {
+    logic        reset;
+    logic [15:0] data_in;
+    logic        ready;
+    logic        int_req;
+    logic  [3:0] ic03;
+    logic        cruin;
+    logic        hold;
+    logic        byte_bus;
+    logic        ir_step2;
+} tms9900_i_t;
+
+typedef struct packed {
+    logic [15:0] addr_out;
+    logic [15:0] data_out;
+    logic        rd;
+    logic        wr;
+    logic        iaq;
+    logic        as;
+    logic        int_ack;
+    logic        cruout;
+    logic        cruclk;
+    logic        holda;
+} tms9900_o_t;
+
+// (Williams)
+// MC6821 PIA (pia6821 with pa_pins: 1 = port A reads the pins for output bits too, MAME set_port_a_input_overrides_output_mask).
+// Pins as pia6821_i_t plus pa_pins; the outputs are pia6821_o_t's. rst is on the bus: each board drives its own reset.
+typedef struct packed {
+    logic        rst;
+    logic        ce;
+    logic        cs;
+    logic        rw;                    // 1 = read
+    logic  [1:0] rs;
+    logic  [7:0] din;
+    logic  [7:0] pa_i;
+    logic        pa_pins;
+    logic        ca1;
+    logic        ca2_i;
+    logic  [7:0] pb_i;
+    logic        cb1;
+    logic        cb2_i;
+} pia6821p_i_t;
+
+typedef struct packed {
+    logic  [7:0] dout;
+    logic        irqa;
+    logic        irqb;
+    logic  [7:0] pa_o;
+    logic  [7:0] pa_oe;
+    logic        ca2_o;
+    logic        ca2_oe;
+    logic  [7:0] pb_o;
+    logic  [7:0] pb_oe;
+    logic        cb2_o;
+    logic        cb2_oe;
+} pia6821p_o_t;
+
+// (Williams)
+// HC-55516 CVSD decoder (hc55516): clock and digit are pin levels; rst is on the bus (the board holds it while it has no speech)
+typedef struct packed {
+    logic        rst;
+    logic        cvsd_clk;
+    logic        digit;
+} hc55516_i_t;
+
+typedef struct packed {
+    logic [15:0] out;                   // signed
+} hc55516_o_t;
+
+// (Williams)
+// YM2151 (jotego jt51; cen = 3.58 MHz enable, cen_p1 = half rate; ct1 / ct2 / sample / xleft / xright unused). rst is on the bus:
+// the board resets it from a PIA line as well as the board reset
+typedef struct packed {
+    logic        rst;
+    logic        cen;
+    logic        cen_p1;
+    logic        cs_n;
+    logic        wr_n;
+    logic        a0;
+    logic  [7:0] din;
+} jt51_i_t;
+
+typedef struct packed {
+    logic  [7:0] dout;
+    logic        irq_n;
+    logic [15:0] left;                  // signed
+    logic [15:0] right;                 // signed
+} jt51_o_t;
+
 endpackage
